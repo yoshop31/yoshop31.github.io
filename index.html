@@ -3,32 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Progressive Web App</title>
-    <link rel="manifest" href="pwa-manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="stylesheet" href="css/style.css">
+    <title>PWA Camera Swipe</title>
     <style>
         .hidden { display: none; }
         .content { text-align: center; margin-top: 20px; }
-        video, canvas { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
+        video, canvas { 
+            max-width: 100%; 
+            margin-top: 10px; 
+            border: 1px solid #ccc; 
+            transition: opacity 0.3s ease-in-out;
+        }
         button { margin: 10px; padding: 10px 15px; font-size: 16px; }
+        .fade-out { opacity: 0; }
+        .fade-in { opacity: 1; }
     </style>
 </head>
 <body>
-    <!-- Page Accueil -->
     <div id="home" class="content">
-        <img src="img/fav-192.png" alt="Red Cherry" width="100">
-        <h1>Red Cherry is here :)</h1>
-        <a href="https://redcherry.ir">redcherry.ir</a>
-        <br><br>
+        <h1>1</h1>
         <button onclick="openPhotoPage()">Photo</button>
     </div>
 
-    <!-- Page Photo -->
     <div id="photoPage" class="content hidden">
         <h2>Prendre une photo</h2>
-        <video id="camera" autoplay playsinline></video>
-        <canvas id="photoCanvas" class="hidden"></canvas>
+        <video id="camera" autoplay playsinline class="fade-in"></video>
+        <canvas id="photoCanvas" class="hidden fade-in"></canvas>
         <br>
         <button onclick="takePhoto()">Prendre</button>
         <button onclick="backHome()">Retour</button>
@@ -40,11 +39,15 @@
         const camera = document.getElementById('camera');
         const photoCanvas = document.getElementById('photoCanvas');
         let stream = null;
+        let cameras = [];
+        let currentCam = 0;
+        let startY = 0;
 
-        function openPhotoPage() {
+        async function openPhotoPage() {
             homePage.classList.add('hidden');
             photoPage.classList.remove('hidden');
-            startCamera();
+            await loadCameras();
+            startCamera(cameras[currentCam].deviceId);
         }
 
         function backHome() {
@@ -53,27 +56,32 @@
             homePage.classList.remove('hidden');
         }
 
-        async function startCamera() {
+        async function loadCameras() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            cameras = devices.filter(d => d.kind === 'videoinput');
+        }
+
+        async function startCamera(deviceId) {
+            if (stream) stopCamera();
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" } }
-                });
-                camera.srcObject = stream;
-                camera.classList.remove('hidden');
-                photoCanvas.classList.add('hidden');
+                camera.classList.add('fade-out');
+                setTimeout(async () => {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: deviceId } }
+                    });
+                    camera.srcObject = stream;
+                    camera.classList.remove('hidden');
+                    photoCanvas.classList.add('hidden');
+                    camera.classList.remove('fade-out');
+                    camera.classList.add('fade-in');
+                }, 300);
             } catch (err) {
-                // Si la caméra arrière n'est pas dispo, on retombe sur n'importe quelle caméra
-                console.warn("Caméra arrière non disponible, bascule sur caméra par défaut.");
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                camera.srcObject = stream;
+                alert("Impossible d'accéder à la caméra : " + err);
             }
         }
 
-
         function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
+            if (stream) stream.getTracks().forEach(track => track.stop());
         }
 
         function takePhoto() {
@@ -81,9 +89,35 @@
             photoCanvas.width = camera.videoWidth;
             photoCanvas.height = camera.videoHeight;
             context.drawImage(camera, 0, 0, camera.videoWidth, camera.videoHeight);
-            camera.classList.add('hidden');
-            photoCanvas.classList.remove('hidden');
+
+            // Ajoute l'effet visuel
+            camera.classList.add('fade-out');
+            setTimeout(() => {
+                camera.classList.add('hidden');
+                photoCanvas.classList.remove('hidden');
+                photoCanvas.classList.remove('fade-out');
+                photoCanvas.classList.add('fade-in');
+            }, 300);
         }
+
+        // Gestion du swipe vertical
+        camera.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchend', (e) => {
+            let endY = e.changedTouches[0].clientY;
+            let diff = endY - startY;
+
+            if (Math.abs(diff) > 50) { 
+                if (diff > 0) {
+                    currentCam = (currentCam + 1) % cameras.length;
+                } else {
+                    currentCam = (currentCam - 1 + cameras.length) % cameras.length;
+                }
+                startCamera(cameras[currentCam].deviceId);
+            }
+        });
     </script>
 </body>
 </html>
