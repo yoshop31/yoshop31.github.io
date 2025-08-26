@@ -2,27 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Progressive Web App</title>
-    <meta name="msapplication-TileColor" content="#af0a1a">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="shortcut icon" href="img/fav-16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="img/fav-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="img/fav-16.png">
-    <link rel="apple-touch-icon" href="img/fav-57.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="img/fav-114.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="img/fav-72.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="img/fav-144.png">
     <link rel="manifest" href="pwa-manifest.json">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="css/style.css">
-    <script type='text/javascript' src="js/main.js"></script>
+    <style>
+        .hidden { display: none; }
+        .content { text-align: center; margin-top: 20px; }
+        video, canvas { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
+        button { margin: 10px; padding: 10px 15px; font-size: 16px; }
+    </style>
 </head>
 <body>
-    <div class="content">
-        <img src="img/fav-192.png" alt="Red Cherry">
+    <!-- Page Accueil -->
+    <div id="home" class="content">
+        <img src="img/fav-192.png" alt="Red Cherry" width="100">
         <h1>Red Cherry is here :)</h1>
         <a href="https://redcherry.ir">redcherry.ir</a>
+        <br><br>
+        <button onclick="openPhotoPage()">Photo</button>
     </div>
+
+    <!-- Page Photo -->
+    <div id="photoPage" class="content hidden">
+        <h2>Prendre une photo</h2>
+        <video id="camera" autoplay playsinline></video>
+        <canvas id="photoCanvas" class="hidden"></canvas>
+        <br>
+        <button onclick="takePhoto()">Prendre</button>
+        <button onclick="backHome()">Retour</button>
+    </div>
+
+    <script>
+        const homePage = document.getElementById('home');
+        const photoPage = document.getElementById('photoPage');
+        const camera = document.getElementById('camera');
+        const photoCanvas = document.getElementById('photoCanvas');
+        let stream = null;
+
+        function openPhotoPage() {
+            homePage.classList.add('hidden');
+            photoPage.classList.remove('hidden');
+            startCamera();
+        }
+
+        function backHome() {
+            stopCamera();
+            photoPage.classList.add('hidden');
+            homePage.classList.remove('hidden');
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                camera.srcObject = stream;
+                camera.classList.remove('hidden');
+                photoCanvas.classList.add('hidden');
+            } catch (err) {
+                alert("Impossible d'accéder à la caméra : " + err);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function takePhoto() {
+            const context = photoCanvas.getContext('2d');
+            photoCanvas.width = camera.videoWidth;
+            photoCanvas.height = camera.videoHeight;
+            context.drawImage(camera, 0, 0, camera.videoWidth, camera.videoHeight);
+            camera.classList.add('hidden');
+            photoCanvas.classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
