@@ -55,14 +55,20 @@
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } }
+                });
                 camera.srcObject = stream;
                 camera.classList.remove('hidden');
                 photoCanvas.classList.add('hidden');
             } catch (err) {
-                alert("Impossible d'accéder à la caméra : " + err);
+                // Si la caméra arrière n'est pas dispo, on retombe sur n'importe quelle caméra
+                console.warn("Caméra arrière non disponible, bascule sur caméra par défaut.");
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                camera.srcObject = stream;
             }
         }
+
 
         function stopCamera() {
             if (stream) {
