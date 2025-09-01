@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Camera Swipe</title>
+    <style>
+        .hidden { display: none; }
+        .content { text-align: center; margin-top: 20px; }
+        video, canvas { 
+            max-width: 100%; 
+            margin-top: 10px; 
+            border: 1px solid #ccc; 
+            transition: opacity 0.3s ease-in-out;
+        }
+        button { margin: 10px; padding: 10px 15px; font-size: 16px; }
+        .fade-out { opacity: 0; }
+        .fade-in { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="home" class="content">
+        <h1>1</h1>
+        <button onclick="openPhotoPage()">Photo</button>
+    </div>
+
+    <div id="photoPage" class="content hidden">
+        <h2>Prendre une photo</h2>
+        <video id="camera" autoplay playsinline class="fade-in"></video>
+        <canvas id="photoCanvas" class="hidden fade-in"></canvas>
+        <br>
+        <button onclick="takePhoto()">Prendre</button>
+        <button onclick="backHome()">Retour</button>
+    </div>
+
+    <script>
+        const homePage = document.getElementById('home');
+        const photoPage = document.getElementById('photoPage');
+        const camera = document.getElementById('camera');
+        const photoCanvas = document.getElementById('photoCanvas');
+        let stream = null;
+        let cameras = [];
+        let currentCam = 0;
+        let startY = 0;
+
+        async function openPhotoPage() {
+            homePage.classList.add('hidden');
+            photoPage.classList.remove('hidden');
+            await loadCameras();
+            startCamera(cameras[currentCam].deviceId);
+        }
+
+        function backHome() {
+            stopCamera();
+            photoPage.classList.add('hidden');
+            homePage.classList.remove('hidden');
+        }
+
+        async function loadCameras() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            cameras = devices.filter(d => d.kind === 'videoinput');
+        }
+
+        async function startCamera(deviceId) {
+            if (stream) stopCamera();
+            try {
+                camera.classList.add('fade-out');
+                setTimeout(async () => {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: deviceId } }
+                    });
+                    camera.srcObject = stream;
+                    camera.classList.remove('hidden');
+                    photoCanvas.classList.add('hidden');
+                    camera.classList.remove('fade-out');
+                    camera.classList.add('fade-in');
+                }, 300);
+            } catch (err) {
+                alert("Impossible d'accéder à la caméra : " + err);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) stream.getTracks().forEach(track => track.stop());
+        }
+
+        function takePhoto() {
+            const context = photoCanvas.getContext('2d');
+            photoCanvas.width = camera.videoWidth;
+            photoCanvas.height = camera.videoHeight;
+            context.drawImage(camera, 0, 0, camera.videoWidth, camera.videoHeight);
+
+            // Ajoute l'effet visuel
+            camera.classList.add('fade-out');
+            setTimeout(() => {
+                camera.classList.add('hidden');
+                photoCanvas.classList.remove('hidden');
+                photoCanvas.classList.remove('fade-out');
+                photoCanvas.classList.add('fade-in');
+            }, 300);
+        }
+
+        // Gestion du swipe vertical
+        camera.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        });
+
+        camera.addEventListener('touchend', (e) => {
+            let endY = e.changedTouches[0].clientY;
+            let diff = endY - startY;
+
+            if (Math.abs(diff) > 50) { 
+                if (diff > 0) {
+                    currentCam = (currentCam + 1) % cameras.length;
+                } else {
+                    currentCam = (currentCam - 1 + cameras.length) % cameras.length;
+                }
+                startCamera(cameras[currentCam].deviceId);
+            }
+        });
+    </script>
+</body>
+</html>
