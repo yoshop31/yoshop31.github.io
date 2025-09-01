@@ -1,123 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA Camera Swipe</title>
-    <style>
-        .hidden { display: none; }
-        .content { text-align: center; margin-top: 20px; }
-        video, canvas { 
-            max-width: 100%; 
-            margin-top: 10px; 
-            border: 1px solid #ccc; 
-            transition: opacity 0.3s ease-in-out;
-        }
-        button { margin: 10px; padding: 10px 15px; font-size: 16px; }
-        .fade-out { opacity: 0; }
-        .fade-in { opacity: 1; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA Anaglyphe 3D</title>
+  <style>
+    .hidden { display: none; }
+    .content { text-align: center; margin-top: 20px; }
+    video, canvas { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
+    button, input[type=range] { margin: 10px; padding: 10px 15px; font-size: 16px; }
+    .fade-out { opacity: 0; transition: opacity 0.3s ease-in-out; }
+    .fade-in { opacity: 1; transition: opacity 0.3s ease-in-out; }
+  </style>
 </head>
 <body>
-    <div id="home" class="content">
-        <h1>1</h1>
-        <button onclick="openPhotoPage()">Photo</button>
-    </div>
+  <div id="home" class="content">
+    <h1>Photo → Anaglyphe 3D</h1>
+    <button onclick="openCamera()">Prendre les 2 photos</button>
+  </div>
 
-    <div id="photoPage" class="content hidden">
-        <h2>Prendre une photo</h2>
-        <video id="camera" autoplay playsinline class="fade-in"></video>
-        <canvas id="photoCanvas" class="hidden fade-in"></canvas>
-        <br>
-        <button onclick="takePhoto()">Prendre</button>
-        <button onclick="backHome()">Retour</button>
-    </div>
+  <div id="cameraPage" class="content hidden">
+    <h2 id="stepTitle">Photo gauche</h2>
+    <video id="camera" autoplay playsinline class="fade-in"></video>
+    <canvas id="photoLeft" class="hidden"></canvas>
+    <canvas id="photoRight" class="hidden"></canvas>
+    <canvas id="anaglyphCanvas" class="hidden"></canvas>
+    <br>
+    <label id="offsetLabel" class="hidden">Décalage: <span id="offsetValue">5</span> px</label>
+    <input type="range" id="offsetSlider" min="0" max="20" value="5" class="hidden" oninput="updateAnaglyph()">
+    <br>
+    <button id="captureBtn" onclick="takePhoto()">Prendre</button>
+    <button onclick="downloadAnaglyph()">Télécharger</button>
+    <button onclick="backHome()">Retour</button>
+  </div>
 
-    <script>
-        const homePage = document.getElementById('home');
-        const photoPage = document.getElementById('photoPage');
-        const camera = document.getElementById('camera');
-        const photoCanvas = document.getElementById('photoCanvas');
-        let stream = null;
-        let cameras = [];
-        let currentCam = 0;
-        let startY = 0;
+  <script>
+    const home = document.getElementById('home');
+    const cameraPage = document.getElementById('cameraPage');
+    const camera = document.getElementById('camera');
+    const photoLeft = document.getElementById('photoLeft');
+    const photoRight = document.getElementById('photoRight');
+    const anaglyphCanvas = document.getElementById('anaglyphCanvas');
+    const slider = document.getElementById('offsetSlider');
+    const offsetLabel = document.getElementById('offsetLabel');
+    const offsetValue = document.getElementById('offsetValue');
+    const stepTitle = document.getElementById('stepTitle');
+    let stream = null;
+    let cameras = [];
+    let currentCam = 0;
+    let startY = 0;
+    let offset = 5;
+    let step = 1; // 1 = gauche, 2 = droite
 
-        async function openPhotoPage() {
-            homePage.classList.add('hidden');
-            photoPage.classList.remove('hidden');
-            await loadCameras();
-            startCamera(cameras[currentCam].deviceId);
+    async function openCamera() {
+      home.classList.add('hidden');
+      cameraPage.classList.remove('hidden');
+      await loadCameras();
+      startCamera(cameras[currentCam]?.deviceId);
+      step = 1;
+      stepTitle.textContent = "Photo gauche";
+    }
+
+    function backHome() {
+      stopCamera();
+      cameraPage.classList.add('hidden');
+      home.classList.remove('hidden');
+      anaglyphCanvas.classList.add('hidden');
+      slider.classList.add('hidden');
+      offsetLabel.classList.add('hidden');
+      step = 1;
+    }
+
+    async function loadCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      cameras = devices.filter(d => d.kind === 'videoinput');
+      const backCamIndex = cameras.findIndex(c => c.label.toLowerCase().includes('back'));
+      if (backCamIndex >= 0) currentCam = backCamIndex;
+    }
+
+    async function startCamera(deviceId) {
+      if (stream) stopCamera();
+      try {
+        camera.classList.add('fade-out');
+        setTimeout(async () => {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId } }
+          });
+          camera.srcObject = stream;
+          camera.classList.remove('fade-out');
+          camera.classList.add('fade-in');
+          camera.classList.remove('hidden');
+          anaglyphCanvas.classList.add('hidden');
+          slider.classList.add('hidden');
+          offsetLabel.classList.add('hidden');
+        }, 300);
+      } catch (err) {
+        alert("Erreur accès caméra : " + err);
+      }
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    function takePhoto() {
+      const ctx = (step === 1 ? photoLeft : photoRight).getContext('2d');
+      const w = camera.videoWidth;
+      const h = camera.videoHeight;
+      (step === 1 ? photoLeft : photoRight).width = w;
+      (step === 1 ? photoLeft : photoRight).height = h;
+      ctx.drawImage(camera, 0, 0);
+
+      if (step === 1) {
+        step = 2;
+        stepTitle.textContent = "Photo droite";
+      } else {
+        createAnaglyph();
+        slider.classList.remove('hidden');
+        offsetLabel.classList.remove('hidden');
+        stepTitle.textContent = "Aperçu 3D";
+      }
+    }
+
+    function createAnaglyph() {
+      const w = photoLeft.width;
+      const h = photoLeft.height;
+      const ctx = anaglyphCanvas.getContext('2d');
+      anaglyphCanvas.width = w;
+      anaglyphCanvas.height = h;
+
+      const leftData = photoLeft.getContext('2d').getImageData(0, 0, w, h);
+      const rightData = photoRight.getContext('2d').getImageData(0, 0, w, h);
+
+      // gauche = rouge
+      const redData = new Uint8ClampedArray(leftData.data);
+      // droite = vert + bleu
+      const cyanData = new Uint8ClampedArray(rightData.data);
+
+      for (let i = 0; i < redData.length; i += 4) {
+        redData[i+1] = 0; redData[i+2] = 0;
+        cyanData[i] = 0;
+      }
+
+      const redImg = new ImageData(redData, w, h);
+      const cyanImg = new ImageData(cyanData, w, h);
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.putImageData(redImg, -offset, 0);
+      ctx.putImageData(cyanImg, offset, 0);
+
+      anaglyphCanvas.classList.remove('hidden');
+    }
+
+    function updateAnaglyph() {
+      offset = parseInt(slider.value);
+      offsetValue.textContent = offset;
+      createAnaglyph();
+    }
+
+    function downloadAnaglyph() {
+      const link = document.createElement('a');
+      link.download = 'anaglyphe3D.png';
+      link.href = anaglyphCanvas.toDataURL();
+      link.click();
+    }
+
+    // Swipe vertical pour changer de caméra
+    camera.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    });
+
+    camera.addEventListener('touchend', (e) => {
+      let endY = e.changedTouches[0].clientY;
+      let diff = endY - startY;
+
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          currentCam = (currentCam + 1) % cameras.length;
+        } else {
+          currentCam = (currentCam - 1 + cameras.length) % cameras.length;
         }
-
-        function backHome() {
-            stopCamera();
-            photoPage.classList.add('hidden');
-            homePage.classList.remove('hidden');
-        }
-
-        async function loadCameras() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            cameras = devices.filter(d => d.kind === 'videoinput');
-        }
-
-        async function startCamera(deviceId) {
-            if (stream) stopCamera();
-            try {
-                camera.classList.add('fade-out');
-                setTimeout(async () => {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: deviceId } }
-                    });
-                    camera.srcObject = stream;
-                    camera.classList.remove('hidden');
-                    photoCanvas.classList.add('hidden');
-                    camera.classList.remove('fade-out');
-                    camera.classList.add('fade-in');
-                }, 300);
-            } catch (err) {
-                alert("Impossible d'accéder à la caméra : " + err);
-            }
-        }
-
-        function stopCamera() {
-            if (stream) stream.getTracks().forEach(track => track.stop());
-        }
-
-        function takePhoto() {
-            const context = photoCanvas.getContext('2d');
-            photoCanvas.width = camera.videoWidth;
-            photoCanvas.height = camera.videoHeight;
-            context.drawImage(camera, 0, 0, camera.videoWidth, camera.videoHeight);
-
-            // Ajoute l'effet visuel
-            camera.classList.add('fade-out');
-            setTimeout(() => {
-                camera.classList.add('hidden');
-                photoCanvas.classList.remove('hidden');
-                photoCanvas.classList.remove('fade-out');
-                photoCanvas.classList.add('fade-in');
-            }, 300);
-        }
-
-        // Gestion du swipe vertical
-        camera.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-        });
-
-        camera.addEventListener('touchend', (e) => {
-            let endY = e.changedTouches[0].clientY;
-            let diff = endY - startY;
-
-            if (Math.abs(diff) > 50) { 
-                if (diff > 0) {
-                    currentCam = (currentCam + 1) % cameras.length;
-                } else {
-                    currentCam = (currentCam - 1 + cameras.length) % cameras.length;
-                }
-                startCamera(cameras[currentCam].deviceId);
-            }
-        });
-    </script>
+        startCamera(cameras[currentCam].deviceId);
+      }
+    });
+  </script>
 </body>
 </html>
