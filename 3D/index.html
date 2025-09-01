@@ -50,7 +50,7 @@
     <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
     <button id="gridBtn" class="hidden" onclick="toggleGrid()">Grille</button>
     <button id="captureBtn" class="hidden" onclick="takePhoto()">Prendre</button>
-    <button onclick="downloadAnaglyph()">Télécharger</button>
+    <button id="downloadBtn" class="hidden" onclick="downloadAnaglyph()">Télécharger</button>
     <button onclick="backHome()">Retour</button>
   </div>
 
@@ -95,6 +95,7 @@
       slider.classList.add('hidden');
       offsetLabel.classList.add('hidden');
       invertBtn.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
       captureBtn.classList.remove('hidden');
       gridBtn.classList.remove('hidden');
       gridCanvas.classList.add('hidden');
@@ -124,6 +125,7 @@
           slider.classList.add('hidden');
           offsetLabel.classList.add('hidden');
           invertBtn.classList.add('hidden');
+          downloadBtn.classList.add('hidden');
           captureBtn.classList.remove('hidden');
           gridBtn.classList.remove('hidden');
           gridCanvas.classList.add('hidden');
@@ -161,6 +163,7 @@
         slider.classList.remove('hidden');
         offsetLabel.classList.remove('hidden');
         invertBtn.classList.remove('hidden');
+        downloadBtn.classList.remove('hidden');
         captureBtn.classList.add('hidden');
         gridBtn.classList.add('hidden');
         stepTitle.textContent = "Aperçu 3D";
