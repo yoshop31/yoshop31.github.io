@@ -29,6 +29,7 @@
     <label id="offsetLabel" class="hidden">Décalage: <span id="offsetValue">5</span> px</label>
     <input type="range" id="offsetSlider" min="0" max="20" value="5" class="hidden" oninput="updateAnaglyph()">
     <br>
+    <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
     <button id="captureBtn" onclick="takePhoto()">Prendre</button>
     <button onclick="downloadAnaglyph()">Télécharger</button>
     <button onclick="backHome()">Retour</button>
@@ -45,14 +46,16 @@
     const offsetLabel = document.getElementById('offsetLabel');
     const offsetValue = document.getElementById('offsetValue');
     const stepTitle = document.getElementById('stepTitle');
+    const invertBtn = document.getElementById('invertBtn');
 
     let stream = null;
     let cameras = [];
     let currentCam = 0;
     let startY = 0;
     let offset = 5;
-    let step = 1; // 1 = gauche, 2 = droite
+    let step = 1;
     let leftImgData = null, rightImgData = null;
+    let invert = true; // Par défaut on inverse Rouge/Cyan
 
     async function openCamera() {
       home.classList.add('hidden');
@@ -70,6 +73,7 @@
       anaglyphCanvas.classList.add('hidden');
       slider.classList.add('hidden');
       offsetLabel.classList.add('hidden');
+      invertBtn.classList.add('hidden');
       step = 1;
     }
 
@@ -95,6 +99,7 @@
           anaglyphCanvas.classList.add('hidden');
           slider.classList.add('hidden');
           offsetLabel.classList.add('hidden');
+          invertBtn.classList.add('hidden');
         }, 300);
       } catch (err) {
         alert("Erreur accès caméra : " + err);
@@ -122,9 +127,11 @@
         leftImgData  = photoLeft.getContext('2d').getImageData(0, 0, photoLeft.width,  photoLeft.height);
         rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
 
+        camera.classList.add('hidden'); // Masque la vidéo
         renderAnaglyph();
         slider.classList.remove('hidden');
         offsetLabel.classList.remove('hidden');
+        invertBtn.classList.remove('hidden');
         stepTitle.textContent = "Aperçu 3D";
       }
     }
@@ -143,22 +150,26 @@
         for (let x = 0; x < w; x++) {
           const idxOut = (y * w + x) * 4;
 
-          const lx = x + off;
-          const rx = x - off;
+          // Si inversion activée : rouge = droite, cyan = gauche
+          const redSrc = invert ? R : L;
+          const cyanSrc = invert ? L : R;
 
-          // Rouge depuis gauche
-          if (lx >= 0 && lx < w) {
-            const idxL = (y * w + lx) * 4;
-            out[idxOut] = L[idxL];
+          const redX = x + off;
+          const cyanX = x - off;
+
+          // Rouge
+          if (redX >= 0 && redX < w) {
+            const idxR = (y * w + redX) * 4;
+            out[idxOut] = redSrc[idxR];
           } else {
             out[idxOut] = 0;
           }
 
-          // Vert + Bleu depuis droite
-          if (rx >= 0 && rx < w) {
-            const idxR = (y * w + rx) * 4;
-            out[idxOut + 1] = R[idxR + 1];
-            out[idxOut + 2] = R[idxR + 2];
+          // Cyan = G+B
+          if (cyanX >= 0 && cyanX < w) {
+            const idxC = (y * w + cyanX) * 4;
+            out[idxOut + 1] = cyanSrc[idxC + 1];
+            out[idxOut + 2] = cyanSrc[idxC + 2];
           } else {
             out[idxOut + 1] = 0;
             out[idxOut + 2] = 0;
@@ -178,6 +189,11 @@
     function updateAnaglyph() {
       offset = parseInt(slider.value, 10);
       offsetValue.textContent = offset;
+      renderAnaglyph();
+    }
+
+    function invertChannels() {
+      invert = !invert;
       renderAnaglyph();
     }
 
