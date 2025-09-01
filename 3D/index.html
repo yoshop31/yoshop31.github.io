@@ -7,7 +7,9 @@
   <style>
     .hidden { display: none; }
     .content { text-align: center; margin-top: 20px; }
+    .camera-container { position: relative; display: inline-block; }
     video, canvas { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
+    #gridCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
     button, input[type=range] { margin: 10px; padding: 10px 15px; font-size: 16px; }
     .fade-out { opacity: 0; transition: opacity 0.3s ease-in-out; }
     .fade-in { opacity: 1; transition: opacity 0.3s ease-in-out; }
@@ -21,7 +23,10 @@
 
   <div id="cameraPage" class="content hidden">
     <h2 id="stepTitle">Photo gauche</h2>
-    <video id="camera" autoplay playsinline class="fade-in"></video>
+    <div class="camera-container">
+      <video id="camera" autoplay playsinline class="fade-in"></video>
+      <canvas id="gridCanvas" class="hidden"></canvas>
+    </div>
     <canvas id="photoLeft" class="hidden"></canvas>
     <canvas id="photoRight" class="hidden"></canvas>
     <canvas id="anaglyphCanvas" class="hidden"></canvas>
@@ -30,6 +35,7 @@
     <input type="range" id="offsetSlider" min="0" max="20" value="5" class="hidden" oninput="updateAnaglyph()">
     <br>
     <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
+    <button id="gridBtn" onclick="toggleGrid()">Grille</button>
     <button id="captureBtn" onclick="takePhoto()">Prendre</button>
     <button onclick="downloadAnaglyph()">Télécharger</button>
     <button onclick="backHome()">Retour</button>
@@ -39,6 +45,7 @@
     const home = document.getElementById('home');
     const cameraPage = document.getElementById('cameraPage');
     const camera = document.getElementById('camera');
+    const gridCanvas = document.getElementById('gridCanvas');
     const photoLeft = document.getElementById('photoLeft');
     const photoRight = document.getElementById('photoRight');
     const anaglyphCanvas = document.getElementById('anaglyphCanvas');
@@ -55,7 +62,8 @@
     let offset = 5;
     let step = 1;
     let leftImgData = null, rightImgData = null;
-    let invert = false; // Par défaut on inverse Rouge/Cyan
+    let invert = false; // Rouge = gauche, Cyan = droite
+    let showGrid = false;
 
     async function openCamera() {
       home.classList.add('hidden');
@@ -74,6 +82,7 @@
       slider.classList.add('hidden');
       offsetLabel.classList.add('hidden');
       invertBtn.classList.add('hidden');
+      gridCanvas.classList.add('hidden');
       step = 1;
     }
 
@@ -100,6 +109,8 @@
           slider.classList.add('hidden');
           offsetLabel.classList.add('hidden');
           invertBtn.classList.add('hidden');
+          gridCanvas.classList.add('hidden');
+          showGrid = false;
         }, 300);
       } catch (err) {
         alert("Erreur accès caméra : " + err);
@@ -127,7 +138,8 @@
         leftImgData  = photoLeft.getContext('2d').getImageData(0, 0, photoLeft.width,  photoLeft.height);
         rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
 
-        camera.classList.add('hidden'); // Masque la vidéo
+        camera.classList.add('hidden'); 
+        gridCanvas.classList.add('hidden');
         renderAnaglyph();
         slider.classList.remove('hidden');
         offsetLabel.classList.remove('hidden');
@@ -195,6 +207,37 @@
     function invertChannels() {
       invert = !invert;
       renderAnaglyph();
+    }
+
+    function toggleGrid() {
+      showGrid = !showGrid;
+      if (showGrid) {
+        gridCanvas.width = camera.videoWidth;
+        gridCanvas.height = camera.videoHeight;
+        gridCanvas.classList.remove('hidden');
+        drawGrid();
+      } else {
+        gridCanvas.classList.add('hidden');
+      }
+    }
+
+    function drawGrid() {
+      if (!showGrid) return;
+      const ctx = gridCanvas.getContext('2d');
+      const w = gridCanvas.width;
+      const h = gridCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 3; i++) {
+        const x = (w / 3) * i;
+        const y = (h / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      requestAnimationFrame(drawGrid);
     }
 
     function downloadAnaglyph() {
