@@ -24,7 +24,6 @@
   </style>
 </head>
 <body>
-  <!--border: 10px solid #FF0000;-->
   
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
@@ -42,11 +41,11 @@
       <canvas id="anaglyphCanvas" class="hidden"></canvas>
     </div>
     <br>
-    <label id="offsetLabel" class="hidden">Décalage X: <span id="offsetValue">0</span> px</label>
-    <input type="range" id="offsetSlider" min="-40" max="40" value="0" class="hidden" oninput="updateAnaglyph()">
-    <label id="offsetYLabel" class="hidden">Décalage Y: <span id="offsetYValue">0</span> px</label>
-    <input type="range" id="offsetYSlider" min="-40" max="40" value="0" class="hidden" oninput="updateAnaglyph()">    
-    <label id="rotationLabel" class="hidden">Rotation: <span id="rotationValue">0</span>°</label>
+    <label id="offsetLabel" class="hidden">X: <span id="offsetValue">0</span> px</label>
+    <input type="range" id="offsetSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">
+    <label id="offsetYLabel" class="hidden">Y: <span id="offsetYValue">0</span> px</label>
+    <input type="range" id="offsetYSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">    
+    <label id="rotationLabel" class="hidden">Rot: <span id="rotationValue">0</span>°</label>
     <input type="range" id="rotationSlider" min="-20" max="20" value="0" class="hidden" oninput="updateAnaglyph()">
     <button id="resetBtn" class="hidden" onclick="resetTransform()">Réinitialiser</button>
     <br>
