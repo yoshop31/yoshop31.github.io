@@ -216,42 +216,51 @@
       const w = leftImgData.width;
       const h = leftImgData.height;
     
-      // Canvas temporaire pour l'image droite transformée
+      // Créer un canvas temporaire pour appliquer les transformations à l'image droite
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = w;
       tempCanvas.height = h;
       const tempCtx = tempCanvas.getContext('2d');
     
-      // Appliquer translation + rotation sur l'image droite
+      // Appliquer rotation + translation puis dessiner l'image droite
       tempCtx.translate(w / 2, h / 2);
       tempCtx.rotate(rotation * Math.PI / 180);
       tempCtx.translate(-w / 2 + offset, -h / 2 + offsetY);
-      tempCtx.putImageData(rightImgData, 0, 0);
     
-      // Récupérer l'image transformée
-      const Rtrans = tempCtx.getImageData(0, 0, w, h);
+      // Convertir rightImgData en image avant drawImage
+      const rightCanvas = document.createElement('canvas');
+      rightCanvas.width = w;
+      rightCanvas.height = h;
+      rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
+    
+      tempCtx.drawImage(rightCanvas, 0, 0);
+    
+      // Récupérer l'image droite transformée
+      const Rtrans = tempCtx.getImageData(0, 0, w, h).data;
     
       // Fusion pixel par pixel
       const out = new Uint8ClampedArray(w * h * 4);
       const L = leftImgData.data;
-      const R = Rtrans.data;
+      const R = Rtrans;
     
       for (let i = 0; i < w * h; i++) {
         const p = i * 4;
         const redSrc = invert ? R : L;
         const cyanSrc = invert ? L : R;
-        out[p]   = redSrc[p];      // R
-        out[p+1] = cyanSrc[p+1];   // G
-        out[p+2] = cyanSrc[p+2];   // B
-        out[p+3] = 255;            // A
+        out[p]   = redSrc[p];      // Rouge
+        out[p+1] = cyanSrc[p+1];   // Vert
+        out[p+2] = cyanSrc[p+2];   // Bleu
+        out[p+3] = 255;            // Alpha
       }
     
+      // Afficher l'anaglyphe final
       const ctx = anaglyphCanvas.getContext('2d');
       anaglyphCanvas.width = w;
       anaglyphCanvas.height = h;
       ctx.putImageData(new ImageData(out, w, h), 0, 0);
       anaglyphCanvas.classList.remove('hidden');
     }
+
 
 
     function updateAnaglyph() {
