@@ -56,9 +56,11 @@
       <canvas id="anaglyphCanvas" class="hidden"></canvas>
     </div>
     <br>
+    <span id="test" class="hidden">
     <label id="offsetLabel" class="hidden">X: <span id="offsetValue">0</span> px
     <input type="range" id="offsetSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">
     </label>
+    </span>
     <label id="offsetYLabel" class="hidden">Y: <span id="offsetYValue">0</span> px
     <input type="range" id="offsetYSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">    
     </label>
@@ -177,6 +179,7 @@
           captureBtn.classList.remove('hidden');
           gridBtn.classList.remove('hidden');
           gridCanvas.classList.add('hidden');
+          document.getElementById('test').classList.add('hidden');
           showGrid = false;
         }, 300);
       } catch (err) {
@@ -223,6 +226,7 @@
         resetBtn.classList.remove('hidden');
         invertBtn.classList.remove('hidden');
         downloadBtn.classList.remove('hidden');
+        document.getElementById('test').classList.remove('hidden');
         captureBtn.classList.add('hidden');
         gridBtn.classList.add('hidden');
         stepTitle.textContent = "Aperçu 3D";
