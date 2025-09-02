@@ -42,6 +42,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
+    <h3>v1</h3>
     <button onclick="openCamera()">Commencer</button>
   </div>
 
@@ -56,18 +57,18 @@
       <canvas id="anaglyphCanvas" class="hidden"></canvas>
     </div>
     <br>
-    <span id="test" class="hidden">
-    <label id="offsetLabel" class="hidden">X: <span id="offsetValue">0</span> px
-    <input type="range" id="offsetSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">
+    <span id="offsetPanel" class="hidden">
+    <label id="offsetLabel" >X: <span id="offsetValue">0</span> px
+    <input type="range" id="offsetSlider" min="-60" max="60" value="0" oninput="updateAnaglyph()">
     </label>
+    <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> px
+    <input type="range" id="offsetYSlider" min="-60" max="60" value="0" oninput="updateAnaglyph()">    
+    </label>
+    <label id="rotationLabel" >Rot: <span id="rotationValue">0</span>°
+    <input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
+    </label>
+    <button id="resetBtn" onclick="resetTransform()">Réinitialiser</button>
     </span>
-    <label id="offsetYLabel" class="hidden">Y: <span id="offsetYValue">0</span> px
-    <input type="range" id="offsetYSlider" min="-60" max="60" value="0" class="hidden" oninput="updateAnaglyph()">    
-    </label>
-    <label id="rotationLabel" class="hidden">Rot: <span id="rotationValue">0</span>°
-    <input type="range" id="rotationSlider" min="-20" max="20" value="0" class="hidden" oninput="updateAnaglyph()">
-    </label>
-    <button id="resetBtn" class="hidden" onclick="resetTransform()">Réinitialiser</button>
     <br>
     <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
     <button id="gridBtn" class="hidden" onclick="toggleGrid()">Grille</button>
@@ -96,6 +97,7 @@
     const offsetYValue = document.getElementById('offsetYValue');
     const rotationValue = document.getElementById('rotationValue');
     const resetBtn = document.getElementById('resetBtn');
+    const offsetPanel = document.getElementById('offsetPanel');
 
     let stream = null;
     let cameras = [];
@@ -132,13 +134,14 @@
       cameraPage.classList.add('hidden');
       home.classList.remove('hidden');
       anaglyphCanvas.classList.add('hidden');
-      slider.classList.add('hidden');
+      /*slider.classList.add('hidden');
       offsetLabel.classList.add('hidden');
       offsetYLabel.classList.add('hidden');
       offsetYSlider.classList.add('hidden');
       rotationLabel.classList.add('hidden');
       rotationSlider.classList.add('hidden');
-      resetBtn.classList.add('hidden');
+      resetBtn.classList.add('hidden');*/
+      offsetPanel.classList.add('hidden');
       invertBtn.classList.add('hidden');
       downloadBtn.classList.add('hidden');
       captureBtn.classList.remove('hidden');
@@ -167,13 +170,14 @@
           camera.classList.add('fade-in');
           camera.classList.remove('hidden');
           anaglyphCanvas.classList.add('hidden');
-          slider.classList.add('hidden');
+          /*slider.classList.add('hidden');
           offsetLabel.classList.add('hidden');
           offsetYLabel.classList.add('hidden');
           offsetYSlider.classList.add('hidden');
           rotationLabel.classList.add('hidden');
           rotationSlider.classList.add('hidden');
-          resetBtn.classList.add('hidden');
+          resetBtn.classList.add('hidden');*/
+          offsetPanel.classList.add('hidden');
           invertBtn.classList.add('hidden');
           downloadBtn.classList.add('hidden');
           captureBtn.classList.remove('hidden');
@@ -217,13 +221,14 @@
         camera.classList.add('hidden'); 
         gridCanvas.classList.add('hidden');
         renderAnaglyph();
-        slider.classList.remove('hidden');
+        /*slider.classList.remove('hidden');
         offsetLabel.classList.remove('hidden');
         offsetYLabel.classList.remove('hidden');
         offsetYSlider.classList.remove('hidden');
         rotationLabel.classList.remove('hidden');
         rotationSlider.classList.remove('hidden');
-        resetBtn.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');*/
+        offsetPanel.classList.remove('hidden');
         invertBtn.classList.remove('hidden');
         downloadBtn.classList.remove('hidden');
         document.getElementById('test').classList.remove('hidden');
