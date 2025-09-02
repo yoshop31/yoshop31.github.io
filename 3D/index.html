@@ -15,7 +15,12 @@
   <style>
     .hidden { display: none; }
     .content { text-align: center; margin-top: 20px; }
-    .camera-container { position: relative; display: inline-block; width: 100%; max-width: 600px; }
+   .camera-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 600px;
+    }
     .camera-container video,
     .camera-container canvas {
       position: absolute;
@@ -25,6 +30,12 @@
       height: auto;
       border: 1px solid #ccc;
       display: block;
+      z-index: 1; /* caméra et images */
+    }
+    #controls {
+      position: relative;
+      z-index: 2; /* boutons au-dessus */
+      margin-top: 10px;
     }
     button, input[type=range] { margin: 5px; padding: 8px 12px; font-size: 16px; }
   </style>
@@ -35,32 +46,33 @@
     <button onclick="openCamera()">Prendre les 2 photos</button>
   </div>
 
-  <div id="cameraPage" class="content hidden">
-    <h2 id="stepTitle">Photo gauche</h2>
-    <div class="camera-container">
-      <video id="camera" autoplay playsinline></video>
-      <canvas id="gridCanvas" class="hidden"></canvas>
-      <canvas id="photoLeft" class="hidden"></canvas>
-      <canvas id="photoRight" class="hidden"></canvas>
-      <canvas id="anaglyphCanvas" class="hidden"></canvas>
-    </div>
-    <br />
+  <div class="camera-container">
+    <video id="camera" autoplay playsinline></video>
+    <canvas id="gridCanvas" class="hidden"></canvas>
+    <canvas id="photoLeft" class="hidden"></canvas>
+    <canvas id="photoRight" class="hidden"></canvas>
+    <canvas id="anaglyphCanvas" class="hidden"></canvas>
+  </div>
+  
+  <div id="controls">
     <label id="offsetLabel" class="hidden">Décalage X: <span id="offsetValue">0</span> px</label>
     <input type="range" id="offsetSlider" min="-40" max="40" value="0" class="hidden" oninput="updateAnaglyph()">
-
+  
     <label id="offsetYLabel" class="hidden">Décalage Y: <span id="offsetYValue">0</span> px</label>
     <input type="range" id="offsetYSlider" min="-40" max="40" value="0" class="hidden" oninput="updateAnaglyph()">
-
+  
     <label id="rotationLabel" class="hidden">Rotation: <span id="rotationValue">0</span>°</label>
     <input type="range" id="rotationSlider" min="-20" max="20" value="0" class="hidden" oninput="updateAnaglyph()">
+  
+    <br />
     <button id="resetBtn" class="hidden" onclick="resetTransform()">Réinitialiser</button>
-    <br>
     <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
     <button id="gridBtn" class="hidden" onclick="toggleGrid()">Grille</button>
     <button id="captureBtn" class="hidden" onclick="takePhoto()">Prendre</button>
     <button id="downloadBtn" class="hidden" onclick="downloadAnaglyph()">Télécharger</button>
     <button onclick="backHome()">Retour</button>
   </div>
+
 
   <script>
     const home = document.getElementById('home');
