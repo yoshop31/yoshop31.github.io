@@ -16,8 +16,8 @@
     .hidden { display: none; }
     .content { text-align: center; margin-top: 20px; }
     .camera-container { position: relative; display: inline-block; }
-    video, canvas { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
-    #gridCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+    video, canvas { max-width: 100%; margin-top: 10px; border: 10px solid #FF0000; }
+    #gridCanvas { position: absolute; top: 0; left: 0; pointer-events: none; border: 10px solid #00FF00; }
     button, input[type=range] { margin: 10px; padding: 10px 15px; font-size: 16px; }
     .fade-out { opacity: 0; transition: opacity 0.3s ease-in-out; }
     .fade-in { opacity: 1; transition: opacity 0.3s ease-in-out; }
@@ -25,7 +25,7 @@
 </head>
 <body>
   <div id="home" class="content">
-    <h1>Photo → Anaglyphe 3D</h1>
+    <h1>Anaglyphe 3D</h1>
     <button onclick="openCamera()">Prendre les 2 photos</button>
   </div>
 
