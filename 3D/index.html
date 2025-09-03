@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v11</h3>
+    <h3>v12</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -275,6 +275,7 @@
 		// Afficher les contrôles + l'anaglyphe
 		//alert("1");
 		home.classList.add('hidden');
+		cameraPage.classList.remove('hidden');
 		showAnaglyphControls();
 		renderAnaglyph();
 	  };
