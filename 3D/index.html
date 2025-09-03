@@ -7,6 +7,11 @@
   <title>PWA Anaglyphe 3D</title>
   <meta name="msapplication-TileColor" content="#af0a1a">
   <meta name="theme-color" content="#ffffff">
+  <!--debut no cache-->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <!--fin no cache-->
   <link rel="shortcut icon" href="img/fav_icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="img/fav_icon.png">
   <link rel="manifest" href="pwa-manifest.json">
@@ -43,12 +48,12 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v8</h3>
+    <h3>v9</h3>
     <span id="welcomePanel" /*class="hidden"*/>
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
     </span>
-	  <input type="file" id="photoInput" accept="image/*" multiple class="hidden">
+	<input type="file" id="photoInput" accept="image/*" multiple class="hidden">
     
   </div>
 
@@ -268,6 +273,7 @@
 		rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
 
 		// Afficher les contrôles + l'anaglyphe
+		  alert("1");
 		showAnaglyphControls();
 		renderAnaglyph();
 	  };
