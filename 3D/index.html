@@ -48,16 +48,16 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v10</h3>
-    <span id="welcomePanel" /*class="hidden"*/>
+    <h3>v11</h3>
+    <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
-    </span>
+    <!--</span>-->
 	<input type="file" id="photoInput" accept="image/*" multiple class="hidden">
     
   </div>
 
-  <div id="cameraPage" class="content">
+  <div id="cameraPage" class="content hidden">
     <h2 id="stepTitle">Photo gauche</h2>
     <div class="camera-container">
       <video id="camera" autoplay playsinline class="fade-in"></video>
@@ -274,6 +274,7 @@
 
 		// Afficher les contrôles + l'anaglyphe
 		//alert("1");
+		home.classList.add('hidden');
 		showAnaglyphControls();
 		renderAnaglyph();
 	  };
