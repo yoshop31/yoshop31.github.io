@@ -43,10 +43,10 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v7</h3>
+    <h3>v8</h3>
     <span id="welcomePanel" /*class="hidden"*/>
-      <button onclick="openCamera()">Prendre des photos</button>
-  	  <button onclick="importPhotos()">Importer des photos</button>
+      <button onclick="openCamera()">Prendre 2 photos</button>
+  	  <button onclick="importPhotos()">Importer 2 photos</button>
     </span>
 	  <input type="file" id="photoInput" accept="image/*" multiple class="hidden">
     
@@ -74,9 +74,9 @@
       </label>
       <button id="resetBtn" onclick="resetTransform()">Réinitialiser</button>
       <br>
-      <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>  
-      <button id="downloadBtn" class="hidden" onclick="downloadAnaglyph()">Télécharger</button>
-  	  <button id="saveSourcesBtn" class="hidden" onclick="downloadSources()">Sauvegarder les photos sources</button>
+      <button id="invertBtn" onclick="invertChannels()">Inverser Rouge/Cyan</button>  
+      <button id="downloadBtn" onclick="downloadAnaglyph()">Télécharger</button>
+  	  <button id="saveSourcesBtn" onclick="downloadSources()">Sauvegarder les photos sources</button>
     </span>
     <button id="gridBtn" class="hidden" onclick="toggleGrid()">Grille</button>
     <button id="captureBtn" class="hidden" onclick="takePhoto()">Prendre</button>
