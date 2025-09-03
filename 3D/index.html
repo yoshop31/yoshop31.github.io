@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v9</h3>
+    <h3>v10</h3>
     <span id="welcomePanel" /*class="hidden"*/>
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -57,7 +57,7 @@
     
   </div>
 
-  <div id="cameraPage" class="content hidden">
+  <div id="cameraPage" class="content">
     <h2 id="stepTitle">Photo gauche</h2>
     <div class="camera-container">
       <video id="camera" autoplay playsinline class="fade-in"></video>
@@ -273,7 +273,7 @@
 		rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
 
 		// Afficher les contrôles + l'anaglyphe
-		  alert("1");
+		//alert("1");
 		showAnaglyphControls();
 		renderAnaglyph();
 	  };
