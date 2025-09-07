@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v19</h3>
+    <h3>v20</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -70,12 +70,12 @@
     <span id="offsetPanel" class="hidden">
       <label id="offsetLabel" >X: <span id="offsetValue">0</span> %
 		<button class="button_up_down" onclick="nudge('x', -1)">-</button>
-      	<input type="range" id="offsetSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">
+      	<input type="range" id="offsetSlider" min="-30" max="30" value="0" oninput="updateAnaglyph()">
 		<button class="button_up_down" onclick="nudge('x', 1)">+</button>
       </label>
       <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> %
       	<button class="button_up_down" onclick="nudge('y', -1)">-</button>
-		<input type="range" id="offsetYSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">    
+		<input type="range" id="offsetYSlider" min="-30" max="30" value="0" oninput="updateAnaglyph()">    
 		<button class="button_up_down" onclick="nudge('y', 1)">+</button>
       </label>
       <label id="rotationLabel" >Rot: <span id="rotationValue">0</span>°
@@ -119,6 +119,8 @@
     const resetBtn = document.getElementById('resetBtn');
     const offsetPanel = document.getElementById('offsetPanel');
     const welcomePanel = document.getElementById('welcomePanel');
+	const cropBtn = document.getElementById('cropBtn');
+
 
     let stream = null;
     let cameras = [];
@@ -470,49 +472,105 @@
 		link2.click();
 	}
 
-	function cropAndDownload() {
-		if (!leftImgData || !rightImgData) return;
-		
-		const w = leftImgData.width;
-		const h = leftImgData.height;
-		
-		// Recalculer l'image transformée (comme dans renderAnaglyph)
-		const tempCanvas = document.createElement('canvas');
-		tempCanvas.width = w;
-		tempCanvas.height = h;
-		const tempCtx = tempCanvas.getContext('2d');
-		
-		const offsetPx = Math.round((offset / 100) * w);
-		const offsetYPx = Math.round((offsetY / 100) * h);
-		
-		tempCtx.translate(w / 2, h / 2);
-		tempCtx.rotate(rotation * Math.PI / 180);
-		tempCtx.translate(-w / 2 + offsetPx, -h / 2 + offsetYPx);
-		
-		const rightCanvas = document.createElement('canvas');
-		rightCanvas.width = w;
-		rightCanvas.height = h;
-		rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
-		tempCtx.drawImage(rightCanvas, 0, 0);
-		
-		// Déterminer zone de superposition
-		let xMin = Math.max(0, offsetPx);
-		let yMin = Math.max(0, offsetYPx);
-		let xMax = Math.min(w, w + offsetPx);
-		let yMax = Math.min(h, h + offsetYPx);
-		
-		// Si rotation, on reste conservatif → recadrage sur tout le canvas
-		if (rotation !== 0) {
-			xMin = 0; yMin = 0; xMax = w; yMax = h;
-		}
-		
-		const cropWidth = xMax - xMin;
-		const cropHeight = yMax - yMin;
-		
-		if (cropWidth <= 0 || cropHeight <= 0) {
-			alert("Pas de zone superposée détectée !");
-		return;
+	// Retourne un canvas de w×h contenant l'image droite transformée (offset%, offsetY%, rotation)
+	function getTransformedRightCanvas() {
+	  if (!rightImgData) return null;
+	
+	  const w = rightImgData.width, h = rightImgData.height;
+	
+	  // % -> px
+	  const offsetPx  = Math.round((offset  / 100) * w);
+	  const offsetYPx = Math.round((offsetY / 100) * h);
+	
+	  const tempCanvas = document.createElement('canvas');
+	  tempCanvas.width = w;
+	  tempCanvas.height = h;
+	  const tempCtx = tempCanvas.getContext('2d');
+	
+	  // Appliquer les mêmes transfos que dans renderAnaglyph()
+	  tempCtx.translate(w / 2, h / 2);
+	  tempCtx.rotate(rotation * Math.PI / 180);
+	  tempCtx.translate(-w / 2 + offsetPx, -h / 2 + offsetYPx);
+	
+	  // Dessiner l'image droite d'origine
+	  const rightCanvas = document.createElement('canvas');
+	  rightCanvas.width = w; rightCanvas.height = h;
+	  rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
+	  tempCtx.drawImage(rightCanvas, 0, 0);
+	
+	  return tempCanvas;
 	}
+	
+	// Trouve le bounding box des pixels non transparents (alpha > 0) d'un ImageData
+	function getOpaqueBounds(imgData, w, h) {
+	  const data = imgData.data;
+	  let xMin = w, yMin = h, xMax = -1, yMax = -1;
+	
+	  // Parcours complet pour rester fiable (tu peux échantillonner si besoin de perf)
+	  for (let y = 0; y < h; y++) {
+	    for (let x = 0; x < w; x++) {
+	      const a = data[(y * w + x) * 4 + 3];
+	      if (a > 0) {
+	        if (x < xMin) xMin = x;
+	        if (x > xMax) xMax = x;
+	        if (y < yMin) yMin = y;
+	        if (y > yMax) yMax = y;
+	      }
+	    }
+	  }
+	  if (xMax === -1) return null; // rien de dessiné
+	  // +1 pour passer de coordonnées inclusives à largeur/hauteur
+	  return { x: xMin, y: yMin, w: xMax - xMin + 1, h: yMax - yMin + 1 };
+	}
+	
+	// ---- Nouveau crop fiable ----
+	function cropAndDownload() {
+	  if (!leftImgData || !rightImgData) return;
+	
+	  // S'assurer que l'anaglyphe correspond bien aux valeurs actuelles
+	  renderAnaglyph();
+	
+	  const w = leftImgData.width, h = leftImgData.height;
+	
+	  // 1) Recalculer l'image droite transformée
+	  const transformed = getTransformedRightCanvas();
+	  if (!transformed) return;
+	
+	  // 2) Déterminer la zone couverte par l'image transformée (alpha > 0)
+	  const tCtx = transformed.getContext('2d');
+	  const tData = tCtx.getImageData(0, 0, w, h);
+	  const bbox = getOpaqueBounds(tData, w, h);
+	
+	  if (!bbox || bbox.w <= 0 || bbox.h <= 0) {
+	    alert("Pas de zone superposée détectée !");
+	    return;
+	  }
+	
+	  // 3) Intersecter avec les limites de la gauche (qui est plein cadre)
+	  const x = Math.max(0, bbox.x);
+	  const y = Math.max(0, bbox.y);
+	  const x2 = Math.min(w, bbox.x + bbox.w);
+	  const y2 = Math.min(h, bbox.y + bbox.h);
+	  const cw = x2 - x;
+	  const ch = y2 - y;
+	
+	  if (cw <= 0 || ch <= 0) {
+	    alert("Zone superposée trop petite ou hors cadre.");
+	    return;
+	  }
+	
+	  // 4) Recadrer depuis l’anaglyphe existant
+	  const out = document.createElement('canvas');
+	  out.width = cw; out.height = ch;
+	  out.getContext('2d').drawImage(anaglyphCanvas, x, y, cw, ch, 0, 0, cw, ch);
+	
+	  // 5) Télécharger
+	  const a = document.createElement('a');
+	  a.download = 'anaglyphe_crop.png';
+	  a.href = out.toDataURL();
+	  a.click();
+	}
+
 	
 	// Créer canvas final recadré
 	const finalCanvas = document.createElement('canvas');
