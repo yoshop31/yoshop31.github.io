@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v15</h3>
+    <h3>v16</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -68,11 +68,11 @@
     </div>
     <br>
     <span id="offsetPanel" class="hidden">
-      <label id="offsetLabel" >X: <span id="offsetValue">0</span> px
-      <input type="range" id="offsetSlider" min="-60" max="60" value="0" oninput="updateAnaglyph()">
+      <label id="offsetLabel" >X: <span id="offsetValue">0</span> %
+      <input type="range" id="offsetSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">
       </label>
-      <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> px
-      <input type="range" id="offsetYSlider" min="-60" max="60" value="0" oninput="updateAnaglyph()">    
+      <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> %
+      <input type="range" id="offsetYSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">    
       </label>
       <label id="rotationLabel" >Rot: <span id="rotationValue">0</span>°
       <input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
@@ -331,69 +331,67 @@
     }
 
     function renderAnaglyph() {
-      if (!leftImgData || !rightImgData) return;
-    
-      const w = leftImgData.width;
-      const h = leftImgData.height;
-    
-      // Créer un canvas temporaire pour appliquer les transformations à l'image droite
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = w;
-      tempCanvas.height = h;
-      const tempCtx = tempCanvas.getContext('2d');
-    
-      // Appliquer rotation + translation puis dessiner l'image droite
-      tempCtx.translate(w / 2, h / 2);
-      tempCtx.rotate(rotation * Math.PI / 180);
-      tempCtx.translate(-w / 2 + offset, -h / 2 + offsetY);
-    
-      // Convertir rightImgData en image avant drawImage
-      const rightCanvas = document.createElement('canvas');
-      rightCanvas.width = w;
-      rightCanvas.height = h;
-      rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
-    
-      tempCtx.drawImage(rightCanvas, 0, 0);
-    
-      // Récupérer l'image droite transformée
-      const Rtrans = tempCtx.getImageData(0, 0, w, h).data;
-    
-      // Fusion pixel par pixel
-      const out = new Uint8ClampedArray(w * h * 4);
-      const L = leftImgData.data;
-      const R = Rtrans;
-    
-      for (let i = 0; i < w * h; i++) {
-        const p = i * 4;
-        const redSrc = invert ? R : L;
-        const cyanSrc = invert ? L : R;
-        out[p]   = redSrc[p];      // Rouge
-        out[p+1] = cyanSrc[p+1];   // Vert
-        out[p+2] = cyanSrc[p+2];   // Bleu
-        out[p+3] = 255;            // Alpha
-      }
-    
-      // Afficher l'anaglyphe final
-      const ctx = anaglyphCanvas.getContext('2d');
-      anaglyphCanvas.width = w;
-      anaglyphCanvas.height = h;
-      ctx.putImageData(new ImageData(out, w, h), 0, 0);
-      anaglyphCanvas.classList.remove('hidden');
-    }
+	  if (!leftImgData || !rightImgData) return;
+	
+	  const w = leftImgData.width;
+	  const h = leftImgData.height;
+	
+	  // Convertir % en pixels
+	  const offsetPx = Math.round((offset / 100) * w);
+	  const offsetYPx = Math.round((offsetY / 100) * h);
+	
+	  // Canvas temporaire
+	  const tempCanvas = document.createElement('canvas');
+	  tempCanvas.width = w;
+	  tempCanvas.height = h;
+	  const tempCtx = tempCanvas.getContext('2d');
+	
+	  tempCtx.translate(w / 2, h / 2);
+	  tempCtx.rotate(rotation * Math.PI / 180);
+	  tempCtx.translate(-w / 2 + offsetPx, -h / 2 + offsetYPx);
+	
+	  const rightCanvas = document.createElement('canvas');
+	  rightCanvas.width = w;
+	  rightCanvas.height = h;
+	  rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
+	  tempCtx.drawImage(rightCanvas, 0, 0);
+	
+	  const Rtrans = tempCtx.getImageData(0, 0, w, h).data;
+	  const out = new Uint8ClampedArray(w * h * 4);
+	  const L = leftImgData.data, R = Rtrans;
+	
+	  for (let i = 0; i < w * h; i++) {
+	    const p = i * 4;
+	    const redSrc = invert ? R : L;
+	    const cyanSrc = invert ? L : R;
+	    out[p]   = redSrc[p];
+	    out[p+1] = cyanSrc[p+1];
+	    out[p+2] = cyanSrc[p+2];
+	    out[p+3] = 255;
+	  }
+	
+	  const ctx = anaglyphCanvas.getContext('2d');
+	  anaglyphCanvas.width = w;
+	  anaglyphCanvas.height = h;
+	  ctx.putImageData(new ImageData(out, w, h), 0, 0);
+	  anaglyphCanvas.classList.remove('hidden');
+	}
+
 
 
 
     function updateAnaglyph() {
-      offset = parseInt(slider.value, 10);
-      offsetY = parseInt(offsetYSlider.value, 10);
-      rotation = parseInt(rotationSlider.value, 10);
-    
-      offsetValue.textContent = offset;
-      offsetYValue.textContent = offsetY;
-      rotationValue.textContent = rotation;
-    
-      renderAnaglyph();
-    }
+	  offset = parseInt(slider.value, 10);   // en %
+	  offsetY = parseInt(offsetYSlider.value, 10); // en %
+	  rotation = parseInt(rotationSlider.value, 10);
+	
+	  offsetValue.textContent = offset;
+	  offsetYValue.textContent = offsetY;
+	  rotationValue.textContent = rotation;
+	
+	  renderAnaglyph();
+	}
+
 
 
     function invertChannels() {
