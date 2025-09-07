@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v20</h3>
+    <h3>v21</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -570,25 +570,6 @@
 	  a.href = out.toDataURL();
 	  a.click();
 	}
-
-	
-	// Créer canvas final recadré
-	const finalCanvas = document.createElement('canvas');
-	finalCanvas.width = cropWidth;
-	finalCanvas.height = cropHeight;
-	const finalCtx = finalCanvas.getContext('2d');
-	
-	// Dessiner depuis l’anaglyphe existant
-	finalCtx.drawImage(anaglyphCanvas, xMin, yMin, cropWidth, cropHeight,
-									  0, 0, cropWidth, cropHeight);
-	
-	// Télécharger
-	const link = document.createElement('a');
-	link.download = 'anaglyphe_crop.png';
-	link.href = finalCanvas.toDataURL();
-	link.click();
-	}
-
 
     // Swipe vertical pour changer de caméra
     camera.addEventListener('touchstart', (e) => {
