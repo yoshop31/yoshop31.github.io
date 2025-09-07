@@ -24,7 +24,7 @@
     video, canvas { max-width: 100%; margin-top: 10px; border: none; } 
     #gridCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
     button { margin: 10px; padding: 10px 15px; font-size: 16px; }
-    input[type=range] { margin: 10px; padding: 0px 0px; font-size: 16px; }
+    input[type=range] { margin: 10px; padding: 0px 0px; font-size: 16px; width:200px; }
     .fade-out { opacity: 0; transition: opacity 0.3s ease-in-out; }
     .fade-in { opacity: 1; transition: opacity 0.3s ease-in-out; }
     #flash {
@@ -40,7 +40,6 @@
       transition: opacity 0.2s ease-out;
     }
     #rotationLabel, #offsetYLabel, #offsetLabel { display: block; }
-
   </style>
 </head>
 <body>
@@ -48,7 +47,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v16</h3>
+    <h3>v17</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -69,18 +68,25 @@
     <br>
     <span id="offsetPanel" class="hidden">
       <label id="offsetLabel" >X: <span id="offsetValue">0</span> %
-      <input type="range" id="offsetSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">
+		<button onclick="nudge('x', -1)">-</button>
+      	<input type="range" id="offsetSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">
+		<button onclick="nudge('x', 1)">+</button>
       </label>
       <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> %
-      <input type="range" id="offsetYSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">    
+      	<button onclick="nudge('y', -1)">-</button>
+		<input type="range" id="offsetYSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">    
+		<button onclick="nudge('y', 1)">+</button>
       </label>
       <label id="rotationLabel" >Rot: <span id="rotationValue">0</span>°
-      <input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
+      	<button onclick="nudge('r', -1)">-</button>
+		<input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
+		<button onclick="nudge('r', 1)">+</button>
       </label>
       <button id="resetBtn" onclick="resetTransform()">Réinitialiser</button>
       <br>
       <button id="invertBtn" onclick="invertChannels()">Inverser Rouge/Cyan</button>  
       <button id="downloadBtn" onclick="downloadAnaglyph()">Télécharger</button>
+	  <button id="cropBtn" onclick="cropAndDownload()">Crop et Télécharge</button>
 	  <br>
   	  <button id="saveSourcesBtn" onclick="downloadSources1()">Save sources1</button>
 	  <button id="saveSourcesBtn" onclick="downloadSources2()">Save sources2</button>
@@ -377,7 +383,16 @@
 	  anaglyphCanvas.classList.remove('hidden');
 	}
 
-
+	function nudge(type, delta) {
+	  if (type === 'x') {
+	    slider.value = Math.min(slider.prop('max'), Math.max(slider.prop('min'), parseInt(slider.value) + delta));
+	  } else if (type === 'y') {
+	    offsetYSlider.value = Math.min(offsetYSlider.prop('max'), Math.max(offsetYSlider.prop('min'), parseInt(offsetYSlider.value) + delta));
+	  } else if (type === 'r') {
+	    rotationSlider.value = Math.min(rotationSlider.prop('max'), Math.max(rotationSlider.prop('min'), parseInt(rotationSlider.value) + delta));
+	  }
+	  updateAnaglyph();
+	}
 
 
     function updateAnaglyph() {
@@ -446,13 +461,75 @@
 	  link1.click();
 	}
 	function downloadSources2() {
-	  if (!photoRight.width) return;
+		if (!photoRight.width) return;
+		
+		const link2 = document.createElement('a');
+		link2.download = 'photo_droite.png';
+		link2.href = photoRight.toDataURL();
+		link2.click();
+	}
 
-	   const link2 = document.createElement('a');
-	   link2.download = 'photo_droite.png';
-	   link2.href = photoRight.toDataURL();
-	   link2.click();
-	  }
+	function cropAndDownload() {
+		if (!leftImgData || !rightImgData) return;
+		
+		const w = leftImgData.width;
+		const h = leftImgData.height;
+		
+		// Recalculer l'image transformée (comme dans renderAnaglyph)
+		const tempCanvas = document.createElement('canvas');
+		tempCanvas.width = w;
+		tempCanvas.height = h;
+		const tempCtx = tempCanvas.getContext('2d');
+		
+		const offsetPx = Math.round((offset / 100) * w);
+		const offsetYPx = Math.round((offsetY / 100) * h);
+		
+		tempCtx.translate(w / 2, h / 2);
+		tempCtx.rotate(rotation * Math.PI / 180);
+		tempCtx.translate(-w / 2 + offsetPx, -h / 2 + offsetYPx);
+		
+		const rightCanvas = document.createElement('canvas');
+		rightCanvas.width = w;
+		rightCanvas.height = h;
+		rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
+		tempCtx.drawImage(rightCanvas, 0, 0);
+		
+		// Déterminer zone de superposition
+		let xMin = Math.max(0, offsetPx);
+		let yMin = Math.max(0, offsetYPx);
+		let xMax = Math.min(w, w + offsetPx);
+		let yMax = Math.min(h, h + offsetYPx);
+		
+		// Si rotation, on reste conservatif → recadrage sur tout le canvas
+		if (rotation !== 0) {
+			xMin = 0; yMin = 0; xMax = w; yMax = h;
+		}
+		
+		const cropWidth = xMax - xMin;
+		const cropHeight = yMax - yMin;
+		
+		if (cropWidth <= 0 || cropHeight <= 0) {
+			alert("Pas de zone superposée détectée !");
+		return;
+	}
+	
+	// Créer canvas final recadré
+	const finalCanvas = document.createElement('canvas');
+	finalCanvas.width = cropWidth;
+	finalCanvas.height = cropHeight;
+	const finalCtx = finalCanvas.getContext('2d');
+	
+	// Dessiner depuis l’anaglyphe existant
+	finalCtx.drawImage(anaglyphCanvas, xMin, yMin, cropWidth, cropHeight,
+									  0, 0, cropWidth, cropHeight);
+	
+	// Télécharger
+	const link = document.createElement('a');
+	link.download = 'anaglyphe_crop.png';
+	link.href = finalCanvas.toDataURL();
+	link.click();
+	}
+
 
     // Swipe vertical pour changer de caméra
     camera.addEventListener('touchstart', (e) => {
