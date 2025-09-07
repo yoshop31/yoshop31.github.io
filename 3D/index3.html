@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PWA Anaglyphe 3D</title>
+  <style>
+    .hidden { display: none; }
+    .content { text-align: center; margin-top: 20px; }
+    .camera-container { position: relative; display: inline-block; width: 100%; max-width: 600px; }
+    .camera-container video,
+    .camera-container canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: auto;
+      border: 1px solid #ccc;
+      display: block;
+      z-index: 1;
+    }
+    #controls { position: relative; z-index: 2; margin-top: 10px; }
+    button, input[type=range] { margin: 5px; padding: 8px 12px; font-size: 16px; }
+    #flash {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transition: opacity 0.2s ease-out;
+    }
+    #cropOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: auto;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .slider-group { display: flex; align-items: center; justify-content: center; gap: 5px; }
+  </style>
+</head>
+<body>
+  <div id="flash"></div>
+
+  <div id="home" class="content">
+    <h1>Photo → Anaglyphe 3D</h1>
+    <button onclick="openCamera()">Prendre les 2 photos</button>
+    <button onclick="importPhotos()">Importer des photos</button>
+    <input type="file" id="photoInput" accept="image/*" multiple class="hidden">
+  </div>
+
+  <div id="cameraPage" class="content hidden">
+    <h2 id="stepTitle">Photo gauche</h2>
+    <div class="camera-container">
+      <video id="camera" autoplay playsinline></video>
+      <canvas id="gridCanvas" class="hidden"></canvas>
+      <canvas id="photoLeft" class="hidden"></canvas>
+      <canvas id="photoRight" class="hidden"></canvas>
+      <canvas id="anaglyphCanvas" class="hidden"></canvas>
+      <canvas id="cropOverlay" class="hidden"></canvas>
+    </div>
+
+    <div id="controls">
+      <label id="offsetLabel" class="hidden">Décalage X: <span id="offsetValue">0</span> %</label>
+      <div class="slider-group hidden" id="offsetControls">
+        <button onclick="nudge('x', -1)">-</button>
+        <input type="range" id="offsetSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">
+        <button onclick="nudge('x', 1)">+</button>
+      </div>
+
+      <label id="offsetYLabel" class="hidden">Décalage Y: <span id="offsetYValue">0</span> %</label>
+      <div class="slider-group hidden" id="offsetYControls">
+        <button onclick="nudge('y', -1)">-</button>
+        <input type="range" id="offsetYSlider" min="-50" max="50" value="0" oninput="updateAnaglyph()">
+        <button onclick="nudge('y', 1)">+</button>
+      </div>
+
+      <label id="rotationLabel" class="hidden">Rotation: <span id="rotationValue">0</span>°</label>
+      <div class="slider-group hidden" id="rotationControls">
+        <button onclick="nudge('r', -1)">-</button>
+        <input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
+        <button onclick="nudge('r', 1)">+</button>
+      </div>
+
+      <br>
+      <button id="invertBtn" class="hidden" onclick="invertChannels()">Inverser Rouge/Cyan</button>
+      <button id="gridBtn" class="hidden" onclick="toggleGrid()">Grille</button>
+      <button id="captureBtn" class="hidden" onclick="takePhoto()">Prendre</button>
+      <button id="downloadBtn" class="hidden" onclick="downloadAnaglyph()">Télécharger anaglyphe</button>
+      <button id="saveSourcesBtn" class="hidden" onclick="downloadSources()">Sauvegarder photos</button>
+      <button id="cropBtn" class="hidden" onclick="cropAndDownload()">Crop et Télécharge</button>
+      <button id="resetBtn" class="hidden" onclick="resetTransform()">Réinitialiser</button>
+      <button onclick="backHome()">Retour</button>
+    </div>
+  </div>
+
+  <script>
+    // éléments DOM
+    const home = document.getElementById('home');
+    const cameraPage = document.getElementById('cameraPage');
+    const camera = document.getElementById('camera');
+    const gridCanvas = document.getElementById('gridCanvas');
+    const photoLeft = document.getElementById('photoLeft');
+    const photoRight = document.getElementById('photoRight');
+    const anaglyphCanvas = document.getElementById('anaglyphCanvas');
+    const cropOverlay = document.getElementById('cropOverlay');
+
+    const slider = document.getElementById('offsetSlider');
+    const offsetLabel = document.getElementById('offsetLabel');
+    const offsetValue = document.getElementById('offsetValue');
+
+    const offsetYSlider = document.getElementById('offsetYSlider');
+    const offsetYLabel = document.getElementById('offsetYLabel');
+    const offsetYValue = document.getElementById('offsetYValue');
+
+    const rotationSlider = document.getElementById('rotationSlider');
+    const rotationLabel = document.getElementById('rotationLabel');
+    const rotationValue = document.getElementById('rotationValue');
+
+    const invertBtn = document.getElementById('invertBtn');
+    const gridBtn = document.getElementById('gridBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const saveSourcesBtn = document.getElementById('saveSourcesBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const cropBtn = document.getElementById('cropBtn');
+
+    const offsetControls = document.getElementById('offsetControls');
+    const offsetYControls = document.getElementById('offsetYControls');
+    const rotationControls = document.getElementById('rotationControls');
+
+    const stepTitle = document.getElementById('stepTitle');
+
+    // état
+    let stream = null, cameras = [], currentCam = 0;
+    let step = 1, leftImgData = null, rightImgData = null;
+    let invert = false, showGrid = false;
+    let offset = 0, offsetY = 0, rotation = 0;
+
+    // --- ouverture / retour ---
+    async function openCamera() {
+      home.classList.add('hidden');
+      cameraPage.classList.remove('hidden');
+      await loadCameras();
+      startCamera(cameras[currentCam]?.deviceId);
+      step = 1;
+      stepTitle.textContent = "Photo gauche";
+      captureBtn.classList.remove('hidden');
+      gridBtn.classList.remove('hidden');
+    }
+
+    function backHome() {
+      stopCamera();
+      cameraPage.classList.add('hidden');
+      home.classList.remove('hidden');
+      [offsetLabel, offsetYLabel, rotationLabel,
+       offsetControls, offsetYControls, rotationControls,
+       invertBtn, downloadBtn, resetBtn, saveSourcesBtn, cropBtn].forEach(el => el.classList.add('hidden'));
+      anaglyphCanvas.classList.add('hidden');
+      cropOverlay.classList.add('hidden');
+    }
+
+    // --- camera helpers ---
+    async function loadCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      cameras = devices.filter(d => d.kind === 'videoinput');
+      const backCamIndex = cameras.findIndex(c => c.label.toLowerCase().includes('back'));
+      if (backCamIndex >= 0) currentCam = backCamIndex;
+    }
+    async function startCamera(deviceId) {
+      if (stream) stopCamera();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
+        camera.srcObject = stream;
+        camera.classList.remove('hidden');
+      } catch (err) { alert("Erreur accès caméra : " + err); }
+    }
+    function stopCamera() { if (stream) stream.getTracks().forEach(track => track.stop()); }
+
+    // --- flash / take ---
+    function triggerFlash() {
+      const flash = document.getElementById('flash');
+      flash.style.opacity = 1;
+      setTimeout(() => { flash.style.opacity = 0; }, 100);
+    }
+
+    function takePhoto() {
+      const ctx = (step === 1 ? photoLeft : photoRight).getContext('2d');
+      const w = camera.videoWidth, h = camera.videoHeight;
+      (step === 1 ? photoLeft : photoRight).width = w;
+      (step === 1 ? photoLeft : photoRight).height = h;
+      ctx.drawImage(camera, 0, 0);
+
+      if (navigator.vibrate) navigator.vibrate(200);
+      triggerFlash();
+
+      if (step === 1) {
+        step = 2; stepTitle.textContent = "Photo droite";
+      } else {
+        leftImgData  = photoLeft.getContext('2d').getImageData(0, 0, photoLeft.width,  photoLeft.height);
+        rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
+        showAnaglyphControls();
+        renderAnaglyph();
+      }
+    }
+
+    // --- import ---
+    function importPhotos() {
+      const input = document.getElementById('photoInput');
+      input.click();
+      input.onchange = async () => {
+        if (input.files.length !== 2) { alert("Veuillez sélectionner exactement 2 photos !"); return; }
+        const [img1, img2] = await Promise.all(Array.from(input.files).map(file => loadImage(file)));
+        drawToCanvas(photoLeft, img1); drawToCanvas(photoRight, img2);
+        leftImgData  = photoLeft.getContext('2d').getImageData(0, 0, photoLeft.width,  photoLeft.height);
+        rightImgData = photoRight.getContext('2d').getImageData(0, 0, photoRight.width, photoRight.height);
+        home.classList.add('hidden'); cameraPage.classList.remove('hidden');
+        showAnaglyphControls(); renderAnaglyph();
+      };
+    }
+    function loadImage(file) {
+      return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.src = URL.createObjectURL(file); });
+    }
+    function drawToCanvas(canvas, img) { canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d').drawImage(img, 0, 0); }
+
+    // --- afficher contrôles ---
+    function showAnaglyphControls() {
+      camera.classList.add('hidden'); gridCanvas.classList.add('hidden');
+      [offsetLabel, offsetYLabel, rotationLabel,
+       offsetControls, offsetYControls, rotationControls,
+       invertBtn, downloadBtn, resetBtn, saveSourcesBtn, cropBtn].forEach(el => el.classList.remove('hidden'));
+      captureBtn.classList.add('hidden'); gridBtn.classList.add('hidden');
+      stepTitle.textContent = "Aperçu 3D";
+    }
+
+    // --- transform / anaglyphe ---
+    function getTransformedRightCanvas() {
+      if (!rightImgData) return null;
+      const w = rightImgData.width, h = rightImgData.height;
+      // % -> px
+      const offsetPx  = Math.round((offset  / 100) * w);
+      const offsetYPx = Math.round((offsetY / 100) * h);
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = w; tempCanvas.height = h;
+      const tempCtx = tempCanvas.getContext('2d');
+
+      // apply center rotation + translation (translation in px)
+      tempCtx.translate(w / 2, h / 2);
+      tempCtx.rotate(rotation * Math.PI / 180);
+      tempCtx.translate(-w / 2 + offsetPx, -h / 2 + offsetYPx);
+
+      const rightCanvas = document.createElement('canvas');
+      rightCanvas.width = w; rightCanvas.height = h;
+      rightCanvas.getContext('2d').putImageData(rightImgData, 0, 0);
+      tempCtx.drawImage(rightCanvas, 0, 0);
+
+      return tempCanvas;
+    }
+
+    function getOpaqueBounds(imgData, w, h) {
+      const data = imgData.data;
+      let xMin = w, yMin = h, xMax = -1, yMax = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const a = data[(y * w + x) * 4 + 3];
+          if (a > 0) {
+            if (x < xMin) xMin = x;
+            if (x > xMax) xMax = x;
+            if (y < yMin) yMin = y;
+            if (y > yMax) yMax = y;
+          }
+        }
+      }
+      if (xMax === -1) return null;
+      return { x: xMin, y: yMin, w: xMax - xMin + 1, h: yMax - yMin + 1 };
+    }
+
+    function drawCropOverlay() {
+      if (!leftImgData || !rightImgData) { cropOverlay.classList.add('hidden'); return; }
+      const w = leftImgData.width, h = leftImgData.height;
+      const transformed = getTransformedRightCanvas();
+      if (!transformed) { cropOverlay.classList.add('hidden'); return; }
+      const tCtx = transformed.getContext('2d');
+      const tData = tCtx.getImageData(0, 0, w, h);
+      const bbox = getOpaqueBounds(tData, w, h);
+      if (!bbox || bbox.w <= 0 || bbox.h <= 0) { cropOverlay.classList.add('hidden'); return; }
+
+      const x = Math.max(0, bbox.x), y = Math.max(0, bbox.y);
+      const x2 = Math.min(w, bbox.x + bbox.w), y2 = Math.min(h, bbox.y + bbox.h);
+      const cw = x2 - x, ch = y2 - y;
+      if (cw <= 0 || ch <= 0) { cropOverlay.classList.add('hidden'); return; }
+
+      // overlay must match anaglyph canvas pixel size
+      cropOverlay.width = anaglyphCanvas.width;
+      cropOverlay.height = anaglyphCanvas.height;
+      cropOverlay.classList.remove('hidden');
+
+      const ctx = cropOverlay.getContext('2d');
+      ctx.clearRect(0, 0, cropOverlay.width, cropOverlay.height);
+      ctx.strokeStyle = 'red'; ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, cw, ch);
+      ctx.fillStyle = 'rgba(255,0,0,0.15)';
+      ctx.fillRect(x, y, cw, ch);
+
+      // keep box for crop
+      cropOverlay._cropBox = { x, y, w: cw, h: ch };
+    }
+
+    function renderAnaglyph() {
+      if (!leftImgData || !rightImgData) return;
+      const w = leftImgData.width, h = leftImgData.height;
+
+      // transformed right canvas
+      const tempCanvas = getTransformedRightCanvas();
+      const Rtrans = tempCanvas.getContext('2d').getImageData(0, 0, w, h).data;
+
+      const out = new Uint8ClampedArray(w * h * 4);
+      const L = leftImgData.data, R = Rtrans;
+
+      for (let i = 0; i < w * h; i++) {
+        const p = i * 4;
+        const redSrc = invert ? R : L;
+        const cyanSrc = invert ? L : R;
+        out[p]   = redSrc[p];
+        out[p+1] = cyanSrc[p+1];
+        out[p+2] = cyanSrc[p+2];
+        out[p+3] = 255;
+      }
+
+      const ctx = anaglyphCanvas.getContext('2d');
+      anaglyphCanvas.width = w; anaglyphCanvas.height = h;
+      ctx.putImageData(new ImageData(out, w, h), 0, 0);
+      anaglyphCanvas.classList.remove('hidden');
+
+      // persistent crop overlay
+      drawCropOverlay();
+    }
+
+    // --- controls update / nudges ---
+    function updateAnaglyph() {
+      offset = parseInt(slider.value, 10);
+      offsetY = parseInt(offsetYSlider.value, 10);
+      rotation = parseInt(rotationSlider.value, 10);
+      offsetValue.textContent = offset;
+      offsetYValue.textContent = offsetY;
+      rotationValue.textContent = rotation;
+      renderAnaglyph();
+    }
+
+    function nudge(type, delta) {
+      if (type === 'x') {
+        slider.value = Math.min(50, Math.max(-50, parseInt(slider.value || 0, 10) + delta));
+      } else if (type === 'y') {
+        offsetYSlider.value = Math.min(50, Math.max(-50, parseInt(offsetYSlider.value || 0, 10) + delta));
+      } else if (type === 'r') {
+        rotationSlider.value = Math.min(20, Math.max(-20, parseInt(rotationSlider.value || 0, 10) + delta));
+      }
+      updateAnaglyph();
+    }
+
+    function invertChannels() { invert = !invert; renderAnaglyph(); }
+
+    function resetTransform() {
+      offset = offsetY = rotation = 0;
+      slider.value = offsetYSlider.value = rotationSlider.value = 0;
+      offsetValue.textContent = offsetYValue.textContent = rotationValue.textContent = 0;
+      renderAnaglyph();
+    }
+
+    function downloadAnaglyph() {
+      if (!anaglyphCanvas.width) return;
+      const link = document.createElement('a');
+      link.download = 'anaglyphe3D.png';
+      link.href = anaglyphCanvas.toDataURL();
+      link.click();
+    }
+
+    // Download two source images (staggered for mobile reliability)
+    function downloadSources() {
+      if (!photoLeft.width || !photoRight.width) return;
+
+      const link1 = document.createElement('a');
+      link1.download = 'photo_gauche.png';
+      link1.href = photoLeft.toDataURL();
+      link1.click();
+
+      setTimeout(() => {
+        const link2 = document.createElement('a');
+        link2.download = 'photo_droite.png';
+        link2.href = photoRight.toDataURL();
+        link2.click();
+      }, 500);
+    }
+
+    // Crop using the persistent overlay box
+    function cropAndDownload() {
+      const box = cropOverlay._cropBox;
+      if (!box) { alert("Pas de zone superposée détectée !"); return; }
+      const { x, y, w, h } = box;
+      const out = document.createElement('canvas');
+      out.width = w; out.height = h;
+      out.getContext('2d').drawImage(anaglyphCanvas, x, y, w, h, 0, 0, w, h);
+      const a = document.createElement('a');
+      a.download = 'anaglyphe_crop.png';
+      a.href = out.toDataURL();
+      a.click();
+    }
+
+    function toggleGrid() {
+      showGrid = !showGrid;
+      if (showGrid) {
+        gridCanvas.width = camera.videoWidth;
+        gridCanvas.height = camera.videoHeight;
+        gridCanvas.classList.remove('hidden');
+        drawGrid();
+      } else {
+        gridCanvas.classList.add('hidden');
+      }
+    }
+
+    function drawGrid() {
+      if (!showGrid) return;
+      const ctx = gridCanvas.getContext('2d');
+      const w = gridCanvas.width, h = gridCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 3; i++) {
+        const x = (w / 3) * i, y = (h / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      requestAnimationFrame(drawGrid);
+    }
+
+    // --- swipe to switch camera ---
+    let startY = 0;
+    camera.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+    camera.addEventListener('touchend', e => {
+      let diff = e.changedTouches[0].clientY - startY;
+      if (Math.abs(diff) > 50) {
+        currentCam = diff > 0 ? (currentCam + 1) % cameras.length : (currentCam - 1 + cameras.length) % cameras.length;
+        startCamera(cameras[currentCam].deviceId);
+      }
+    });
+  </script>
+</body>
+</html>
