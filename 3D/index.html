@@ -25,7 +25,7 @@
     #gridCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
     button { margin: 10px; padding: 10px 15px; font-size: 16px; }
 	.button_up_down { margin: 3px; padding: 3px 3px; font-size: 16px; }
-    input[type=range] { margin: 10px; padding: 0px 0px; font-size: 16px; width:160px; }
+    input[type=range] { margin: 0px; padding: 0px 0px; font-size: 16px; width:160px; }
     .fade-out { opacity: 0; transition: opacity 0.3s ease-in-out; }
     .fade-in { opacity: 1; transition: opacity 0.3s ease-in-out; }
     #flash {
@@ -48,7 +48,7 @@
 
   <div id="home" class="content">
     <h1>Anaglyphe 3D</h1>
-    <h3>v18</h3>
+    <h3>v19</h3>
     <!--<span id="welcomePanel" /*class="hidden"*/>-->
       <button onclick="openCamera()">Prendre 2 photos</button>
   	  <button onclick="importPhotos()">Importer 2 photos</button>
@@ -69,19 +69,19 @@
     <br>
     <span id="offsetPanel" class="hidden">
       <label id="offsetLabel" >X: <span id="offsetValue">0</span> %
-		<button class=".button_up_down" onclick="nudge('x', -1)">-</button>
+		<button class="button_up_down" onclick="nudge('x', -1)">-</button>
       	<input type="range" id="offsetSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">
-		<button class=".button_up_down" onclick="nudge('x', 1)">+</button>
+		<button class="button_up_down" onclick="nudge('x', 1)">+</button>
       </label>
       <label id="offsetYLabel" >Y: <span id="offsetYValue">0</span> %
-      	<button class=".button_up_down" onclick="nudge('y', -1)">-</button>
+      	<button class="button_up_down" onclick="nudge('y', -1)">-</button>
 		<input type="range" id="offsetYSlider" min="-25" max="25" value="0" oninput="updateAnaglyph()">    
-		<button class=".button_up_down" onclick="nudge('y', 1)">+</button>
+		<button class="button_up_down" onclick="nudge('y', 1)">+</button>
       </label>
       <label id="rotationLabel" >Rot: <span id="rotationValue">0</span>°
-      	<button class=".button_up_down" onclick="nudge('r', -1)">-</button>
+      	<button class="button_up_down" onclick="nudge('r', -1)">-</button>
 		<input type="range" id="rotationSlider" min="-20" max="20" value="0" oninput="updateAnaglyph()">
-		<button class=".button_up_down" onclick="nudge('r', 1)">+</button>
+		<button class="button_up_down" onclick="nudge('r', 1)">+</button>
       </label>
       <button id="resetBtn" onclick="resetTransform()">Réinitialiser</button>
       <br>
