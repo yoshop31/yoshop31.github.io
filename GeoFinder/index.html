@@ -29,7 +29,7 @@
 </head>
 <body>
   <div id="app">
-    <div id="header">GeoFinder v7</div>
+    <div id="header">GeoFinder v8</div>
     <div id="controls">
       <input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
       <button id="select-btn">Sélectionner sur la carte</button>
@@ -159,7 +159,7 @@
   }
 
   function attachOrientation() {
-    let lastUpdate = 0;
+    
     window.addEventListener('deviceorientationabsolute', e => {
       handleOrientation(e, "absolute");
     }, true);
@@ -171,6 +171,7 @@
   let headingHistory = [];
 
   function handleOrientation(e, source) {
+    let lastUpdate = 0;
     const now = Date.now();
     // filtre pour éviter 2 updates quasi simultanés
     if (now - lastUpdate < 100 && source === "relative") return;
