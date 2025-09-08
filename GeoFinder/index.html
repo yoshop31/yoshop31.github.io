@@ -29,7 +29,7 @@
 </head>
 <body>
   <div id="app">
-    <div id="header">GeoFinder v3</div>
+    <div id="header">GeoFinder v4</div>
     <div id="controls">
       <input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
       <button id="select-btn">Sélectionner sur la carte</button>
@@ -163,15 +163,38 @@
     window.addEventListener('deviceorientation', handleOrientation, true);
   }
 
+  let headingHistory = [];
+
   function handleOrientation(e) {
     let alpha = null;
-    if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
-    else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading;
-    else if (typeof e.alpha === 'number') alpha = e.alpha;
+  
+    // iOS : webkitCompassHeading est le plus fiable
+    if (typeof e.webkitCompassHeading === 'number') {
+      alpha = e.webkitCompassHeading; // 0 = Nord
+    } 
+    // Android : fallback sur alpha
+    else if (typeof e.alpha === 'number') {
+      // e.alpha : 0 = device vers le Nord, mais il faut inverser
+      alpha = 360 - e.alpha;
+    }
+  
     if (alpha === null) return;
-    deviceHeading = 360 - alpha;
+  
+    // Appliquer correction selon orientation écran
+    if (window.screen.orientation) {
+      const angle = window.screen.orientation.angle || 0;
+      alpha = (alpha + angle) % 360;
+    }
+  
+    // Lisser avec moyenne glissante
+    headingHistory.push(alpha);
+    if (headingHistory.length > 10) headingHistory.shift();
+    const avg = headingHistory.reduce((a,b) => a+b, 0) / headingHistory.length;
+  
+    deviceHeading = avg;
     updateArrow();
   }
+
 
   function toRad(d){return d*Math.PI/180}
   function toDeg(r){return r*180/Math.PI}
