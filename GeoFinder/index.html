@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA GeoFinder 3D</title>
+  <meta name="msapplication-TileColor" content="#af0a1a">
+  <meta name="theme-color" content="#ffffff">
+  <!--debut no cache-->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <!--fin no cache-->
+  <link rel="shortcut icon" href="img/fav_icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/fav_icon.png">
+  <link rel="manifest" href="pwa-manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script type='text/javascript' src="js/main.js"></script>
+  <style>
+    html,body,#app{height:100%;margin:0;font-family:system-ui,Arial}
+	#map{position:absolute;top:60px;right:0;left:0;bottom:0}
+	#controls{position:fixed;top:6px;left:8px;right:8px;height:48px;display:flex;gap:8px;align-items:center;z-index:10}
+	#search-input{flex:1;padding:8px;border-radius:6px;border:1px solid #ccc}
+	#select-btn{padding:8px 10px;border-radius:6px;border:0;background:#2b8;color:#fff}
+	#status{min-width:160px;font-size:14px;color:#333}
+	#arrow-wrap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none}
+	#arrow{font-size:140px;line-height:1;transform-origin:center center;transition:transform 200ms ease-out;text-shadow:0 2px 6px rgba(0,0,0,0.4)}
+	#locate{position:fixed;right:14px;bottom:24px;z-index:12;padding:12px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+
+
+	/* plus petit sur petits écrans */
+	@media (max-width:420px){#arrow{font-size:100px}}
+  </style>
+</head>
+<body>
+	<div id="app">
+		<div id="controls">
+			<input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
+			<button id="select-btn">Sélectionner sur la carte</button>
+			<div id="status">Statut : attente...</div>
+		</div>
+
+
+		<div id="map"></div>
+
+
+		<!-- Flèche centrée, visible au-dessus de la map -->
+		<div id="arrow-wrap">
+			<div id="arrow">▲</div>
+		</div>
+
+
+		<button id="locate" title="Centrer ma position">📍</button>
+	</div>
+
+
+	
+	<!-- Google Maps JS + Places. Remplacez la clé ci-dessous. -->
+	<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUmq3deIubPMgKpe5Kslrod0caf5FlbE&libraries=places&language=fr"></script>
+	
+	<script>
+	
+	let map, marker, target = null;
+	DeviceOrientationEvent.requestPermission().then(resp => {
+	if (resp === 'granted') attachOrientation(); else statusEl().textContent = 'Permission boussole refusée';
+	}).catch(e => statusEl().textContent = 'boussole: ' + e);
+	} else {
+	attachOrientation();
+	}
+	}
+
+
+	function attachOrientation() {
+	window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+	window.addEventListener('deviceorientation', handleOrientation, true);
+	}
+
+
+	function handleOrientation(e) {
+	// utiliser absolute si disponible, fallback sur alpha
+	let alpha = null;
+	if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
+	else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading; // iOS
+	else if (typeof e.alpha === 'number') alpha = e.alpha;
+	if (alpha === null) return;
+	// alpha est angle en degrés: 0 = device faces north
+	// normalisons
+	deviceHeading = 360 - alpha; // expérimenté pour faire pointer correctement
+	updateArrow();
+	}
+
+
+	function toRad(d){return d*Math.PI/180}
+	function toDeg(r){return r*180/Math.PI}
+
+
+	function bearingBetween(start, end){
+	// start/end are {lat,lng}
+	const lat1 = toRad(start.lat), lat2 = toRad(end.lat);
+	const dLon = toRad(end.lng - start.lng);
+	const y = Math.sin(dLon)*Math.cos(lat2);
+	const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+	let brng = toDeg(Math.atan2(y,x));
+	brng = (brng + 360) % 360;
+	return brng;
+	}
+
+
+	function updateArrow() {
+	const aEl = arrowEl();
+	if (!aEl) return;
+	if (!target) { aEl.style.opacity = '0.25'; aEl.style.transform = 'rotate(0deg)'; return; }
+	if (!currentPos) { aEl.style.opacity = '0.6'; aEl.style.transform = 'rotate(0deg)'; statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
+	const brng = bearingBetween(currentPos, target); // nord->target
+	statusEl().textContent = `Cap vers cible: ${brng.toFixed(0)}°`;
+
+
+	let angleToRotate = brng; // angle (deg) from north to target
+	if (deviceHeading !== null) {
+	// la flèche doit tourner pour compenser l'orientation du device
+	// si deviceHeading = 0 (north up), on doit tourner de brng
+	// si deviceHeading = 90 (East), la flèche doit tourner de brng - 90
+	angleToRotate = (brng - deviceHeading + 360) % 360;
+	}
+	aEl.style.opacity = '1';
+	aEl.style.transform = `rotate(${angleToRotate}deg)`;
+	}
+
+
+	// UI wiring
+	window.addEventListener('load', () => {
+	// attendre que la maps API ait défini `google` avant d'initialiser ce qui en dépend
+	const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
+
+
+	document.getElementById('select-btn').addEventListener('click', (e) => {
+	selecting = !selecting;
+	e.target.textContent = selecting ? 'Cliquez sur la carte...' : 'Sélectionner sur la carte';
+	});
+
+
+	document.getElementById('locate').addEventListener('click', () => {
+	if (currentPos) map.panTo(currentPos);
+	});
+
+
+	// démarrer GPS et orientation au chargement (après un geste utilisateur si nécessaire)
+	startPositionWatch();
+	document.getElementById('search-input').addEventListener('focus', requestDeviceOrientationPermissionIfNeeded, { once: true });
+	document.getElementById('select-btn').addEventListener('click', requestDeviceOrientationPermissionIfNeeded, { once: true });
+	});
+	
+	
+	</script>
+
+  
+</body>
+</html>
