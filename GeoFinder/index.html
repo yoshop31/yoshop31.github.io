@@ -7,266 +7,229 @@
   <title>PWA GeoFinder 3D</title>
   <meta name="msapplication-TileColor" content="#af0a1a">
   <meta name="theme-color" content="#ffffff">
-  <!--debut no cache-->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <!--fin no cache-->
-  <link rel="shortcut icon" href="img/fav_icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/fav_icon.png">
-  <link rel="manifest" href="pwa-manifest.json">
-  <link rel="stylesheet" href="css/style.css">
-  <script type='text/javascript' src="js/main.js"></script>
-  <style>
-    html,body,#app{height:100%;margin:0;font-family:system-ui,Arial}
-	#map{position:absolute;top:60px;right:0;left:0;bottom:0}
-	#controls{position:fixed;top:6px;left:8px;right:8px;height:48px;display:flex;gap:8px;align-items:center;z-index:10}
-	#search-input{flex:1;padding:8px;border-radius:6px;border:1px solid #ccc}
-	#select-btn{padding:8px 10px;border-radius:6px;border:0;background:#2b8;color:#fff}
-	#status{min-width:160px;font-size:14px;color:#333}
-	#arrow-wrap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none}
-	#arrow{font-size:140px;line-height:1;transform-origin:center center;transition:transform 200ms ease-out;text-shadow:0 2px 6px rgba(0,0,0,0.4)}
-	#locate{position:fixed;right:14px;bottom:24px;z-index:12;padding:12px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-
-
-	/* plus petit sur petits écrans */
-	@media (max-width:420px){#arrow{font-size:100px}}
-  </style>
-</head>
-	
-<body>
-	<div id="app">
-		GeoFinder v1
-		<div id="controls">
-			<input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
-			<button id="select-btn">Sélectionner sur la carte</button>
-			<div id="status">Statut : attente...</div>
-		</div>
-
-
-		<div id="map"></div>
-
-
-		<!-- Flèche centrée, visible au-dessus de la map -->
-		<div id="arrow-wrap">
-			<div id="arrow">▲</div>
-		</div>
-
-
-		<button id="locate" title="Centrer ma position">📍</button>
-	</div>
-
-
-	
-	<!-- Google Maps JS + Places. Remplacez la clé ci-dessous. -->
-	<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUmq3deIubPMgKpe5Kslrod0caf5FlbE&libraries=places&language=fr"></script>
-	
-	<script>
-	
-	<!DOCTYPE html>
-
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PWA GeoFinder 3D</title>
-  <meta name="msapplication-TileColor" content="#af0a1a">
-  <meta name="theme-color" content="#ffffff">
-  <!--debut no cache-->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <!--fin no cache-->
-  <link rel="shortcut icon" href="img/fav_icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/fav_icon.png">
   <link rel="manifest" href="pwa-manifest.json">
   <style>
     html,body,#app{height:100%;margin:0;font-family:system-ui,Arial}
-	#map{position:absolute;top:120px;right:0;left:0;bottom:0}
-	#controls{position:fixed;top:6px;left:8px;right:8px;height:48px;display:flex;gap:8px;align-items:center;z-index:10}
-	#search-input{flex:1;padding:8px;border-radius:6px;border:1px solid #ccc}
-	#select-btn{padding:8px 10px;border-radius:6px;border:0;background:#2b8;color:#fff}
-	#status{min-width:160px;font-size:14px;color:#333}
-    #info{position:fixed;top:60px;left:8px;right:8px;height:48px;display:flex;justify-content:space-between;align-items:center;z-index:10;font-size:14px;background:#fff;padding:4px 8px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
-	#arrow-wrap{position:fixed;z-index:20;pointer-events:none}
-	#arrow{width:100px;height:100px;}
-	#locate{position:fixed;right:14px;bottom:24px;z-index:12;padding:12px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-	#precision{width:100px;height:10px;background:#eee;border-radius:5px;overflow:hidden}
-	#precision-fill{height:100%;width:100%;background:#2b8}
-	@media (max-width:420px){#arrow{width:70px;height:70px}}
+    #header{position:fixed;top:0;left:0;right:0;height:50px;background:#2b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;z-index:20}
+    #map{position:absolute;top:100px;right:0;left:0;bottom:0}
+    #controls{position:fixed;top:56px;left:8px;right:8px;height:40px;display:flex;gap:8px;align-items:center;z-index:10}
+    #search-input{flex:1;padding:6px;border-radius:6px;border:1px solid #ccc}
+    #select-btn{padding:6px 10px;border-radius:6px;border:0;background:#2b8;color:#fff}
+    #status{min-width:160px;font-size:14px;color:#333}
+    #info{position:fixed;top:60px;left:8px;right:8px;height:48px;display:flex;justify-content:space-between;align-items:center;z-index:10;font-size:14px;background:#fff;padding:4px 8px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:none}
+    #arrow-wrap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;display:none}
+    #arrow{width:100px;height:100px;}
+    #cone{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:19;pointer-events:none;display:none}
+    #locate{position:fixed;right:14px;bottom:24px;z-index:12;padding:12px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+    #back-btn{position:fixed;top:60px;left:8px;z-index:15;padding:6px 12px;border:0;background:#af0a1a;color:#fff;border-radius:6px;display:none}
+    #precision{width:100px;height:10px;background:#eee;border-radius:5px;overflow:hidden}
+    #precision-fill{height:100%;width:100%;background:#2b8}
+    @media (max-width:420px){#arrow{width:70px;height:70px}}
   </style>
 </head>
 <body>
-	<div id="app">
-		<div id="controls">
-			<input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
-			<button id="select-btn">Sélectionner sur la carte</button>
-			<div id="status">Statut : attente...</div>
-		</div>
-		<div id="info">
-			<div id="distance">Distance : --</div>
-			<div id="precision"><div id="precision-fill"></div></div>
-		</div>
-		<div id="map"></div>
-		<!-- Flèche centrée sur la position actuelle -->
-		<div id="arrow-wrap">
-			<svg id="arrow" viewBox="0 0 100 100">
-				<polygon points="50,0 90,100 50,80 10,100" fill="#2b8" stroke="#000" stroke-width="2" />
-			</svg>
-		</div>
-		<button id="locate" title="Centrer ma position">📍</button>
-	</div>
+  <div id="app">
+    <div id="header">GeoFinder v3</div>
+    <div id="controls">
+      <input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
+      <button id="select-btn">Sélectionner sur la carte</button>
+      <div id="status">Statut : attente...</div>
+    </div>
+    <div id="info">
+      <div id="distance">Distance : --</div>
+      <div id="precision"><div id="precision-fill"></div></div>
+    </div>
+    <div id="map"></div>
 
-```
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUmq3deIubPMgKpe5Kslrod0caf5FlbE&libraries=places&language=fr"></script>
-<script>
-let map, marker, target = null;
-let watchId = null;
-let deviceHeading = null;
-let currentPos = null;
-let currentAccuracy = null;
-let selecting = false;
+    <!-- Cône d’incertitude -->
+    <div id="cone">
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <path id="cone-path" d="M100,100 L30,200 A70,70 0 0,0 170,200 Z" fill="rgba(43,136,0,0.2)"/>
+      </svg>
+    </div>
 
-const statusEl = () => document.getElementById('status');
-const arrowEl = () => document.getElementById('arrow');
-const distanceEl = () => document.getElementById('distance');
-const precisionFillEl = () => document.getElementById('precision-fill');
+    <!-- Flèche -->
+    <div id="arrow-wrap">
+      <svg id="arrow" viewBox="0 0 100 100">
+        <polygon points="50,0 90,100 50,70 10,100" fill="#2b8" stroke="#000" stroke-width="2" />
+      </svg>
+    </div>
 
-function initMapOnceReady() {
-	const defaultPos = { lat: 48.8566, lng: 2.3522 };
-	map = new google.maps.Map(document.getElementById('map'), {
-		center: defaultPos,
-		zoom: 13,
-		mapTypeControl: false
-	});
-	marker = new google.maps.Marker({ map, draggable: false });
-	const input = document.getElementById('search-input');
-	const ac = new google.maps.places.Autocomplete(input, { fields: ['geometry','formatted_address','name'] });
-	ac.addListener('place_changed', () => {
-		const place = ac.getPlace();
-		if (!place.geometry) return;
-		const loc = place.geometry.location;
-		setTarget({ lat: loc.lat(), lng: loc.lng() }, place.formatted_address || place.name);
-		map.panTo(loc);
-		map.setZoom(16);
-	});
-	map.addListener('click', (e) => {
-		if (!selecting) return;
-		setTarget({ lat: e.latLng.lat(), lng: e.latLng.lng() }, 'Point choisi');
-		selecting = false;
-		document.getElementById('select-btn').textContent = 'Sélectionner sur la carte';
-	});
-}
+    <button id="locate" title="Centrer ma position">📍</button>
+    <button id="back-btn">Retour</button>
+  </div>
 
-function setTarget(latlng, label) {
-	target = latlng;
-	marker.setPosition(latlng);
-	marker.setMap(map);
-	statusEl().textContent = `Cible : ${label || ''} (${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)})`;
-	updateArrow();
-}
+  <!-- Google Maps -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUmq3deIubPMgKpe5Kslrod0caf5FlbE&libraries=places&language=fr"></script>
 
-function startPositionWatch() {
-	if (!('geolocation' in navigator)) { statusEl().textContent = 'Géo non supportée'; return; }
-	watchId = navigator.geolocation.watchPosition(pos => {
-		currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-		currentAccuracy = pos.coords.accuracy;
-		updateArrow();
-	}, err => {
-		statusEl().textContent = 'Erreur position: ' + err.message;
-	}, { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
-}
+  <script>
+  let map, marker, target = null;
+  let watchId = null;
+  let deviceHeading = null;
+  let currentPos = null;
+  let currentAccuracy = null;
+  let selecting = false;
+  let inArrowMode = false;
 
-function stopPositionWatch() {
-	if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-}
+  const statusEl = () => document.getElementById('status');
+  const arrowWrap = () => document.getElementById('arrow-wrap');
+  const arrowEl = () => document.getElementById('arrow');
+  const coneEl = () => document.getElementById('cone');
+  const distanceEl = () => document.getElementById('distance');
+  const precisionFillEl = () => document.getElementById('precision-fill');
+  const infoEl = () => document.getElementById('info');
+  const mapEl = () => document.getElementById('map');
+  const controlsEl = () => document.getElementById('controls');
+  const backBtn = () => document.getElementById('back-btn');
 
-function requestDeviceOrientationPermissionIfNeeded() {
-	if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-		DeviceOrientationEvent.requestPermission().then(resp => {
-			if (resp === 'granted') attachOrientation(); else statusEl().textContent = 'Permission boussole refusée';
-		}).catch(e => statusEl().textContent = 'boussole: ' + e);
-	} else {
-		attachOrientation();
-	}
-}
+  function initMapOnceReady() {
+    const defaultPos = { lat: 48.8566, lng: 2.3522 };
+    map = new google.maps.Map(mapEl(), {
+      center: defaultPos,
+      zoom: 13,
+      mapTypeControl: false
+    });
+    marker = new google.maps.Marker({ map, draggable: false });
+    const input = document.getElementById('search-input');
+    const ac = new google.maps.places.Autocomplete(input, { fields: ['geometry','formatted_address','name'] });
+    ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
+      if (!place.geometry) return;
+      const loc = place.geometry.location;
+      setTarget({ lat: loc.lat(), lng: loc.lng() }, place.formatted_address || place.name);
+      map.panTo(loc);
+      map.setZoom(16);
+    });
+    map.addListener('click', (e) => {
+      if (!selecting) return;
+      setTarget({ lat: e.latLng.lat(), lng: e.latLng.lng() }, 'Point choisi');
+      selecting = false;
+      document.getElementById('select-btn').textContent = 'Sélectionner sur la carte';
+    });
+  }
 
-function attachOrientation() {
-	window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-	window.addEventListener('deviceorientation', handleOrientation, true);
-}
+  function setTarget(latlng, label) {
+    target = latlng;
+    marker.setPosition(latlng);
+    marker.setMap(map);
+    statusEl().textContent = `Cible : ${label || ''}`;
+    enterArrowMode();
+    updateArrow();
+  }
 
-function handleOrientation(e) {
-	let alpha = null;
-	if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
-	else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading;
-	else if (typeof e.alpha === 'number') alpha = e.alpha;
-	if (alpha === null) return;
-	deviceHeading = 360 - alpha;
-	updateArrow();
-}
+  function enterArrowMode(){
+    inArrowMode = true;
+    mapEl().style.display = 'none';
+    controlsEl().style.display = 'none';
+    arrowWrap().style.display = 'block';
+    coneEl().style.display = 'block';
+    infoEl().style.display = 'flex';
+    backBtn().style.display = 'block';
+  }
 
-function toRad(d){return d*Math.PI/180}
-function toDeg(r){return r*180/Math.PI}
+  function exitArrowMode(){
+    inArrowMode = false;
+    mapEl().style.display = 'block';
+    controlsEl().style.display = 'flex';
+    arrowWrap().style.display = 'none';
+    coneEl().style.display = 'none';
+    infoEl().style.display = 'none';
+    backBtn().style.display = 'none';
+  }
 
-function bearingBetween(start, end){
-	const lat1 = toRad(start.lat), lat2 = toRad(end.lat);
-	const dLon = toRad(end.lng - start.lng);
-	const y = Math.sin(dLon)*Math.cos(lat2);
-	const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-	let brng = toDeg(Math.atan2(y,x));
-	brng = (brng + 360) % 360;
-	return brng;
-}
+  function startPositionWatch() {
+    if (!('geolocation' in navigator)) { statusEl().textContent = 'Géo non supportée'; return; }
+    watchId = navigator.geolocation.watchPosition(pos => {
+      currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      currentAccuracy = pos.coords.accuracy;
+      updateArrow();
+    }, err => {
+      statusEl().textContent = 'Erreur position: ' + err.message;
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
+  }
 
-function distanceBetween(start, end){
-	const R = 6371e3;
-	const φ1 = toRad(start.lat), φ2 = toRad(end.lat);
-	const Δφ = toRad(end.lat-start.lat);
-	const Δλ = toRad(end.lng-start.lng);
-	const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-	const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-	return R*c;
-}
+  function requestDeviceOrientationPermissionIfNeeded() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(resp => {
+        if (resp === 'granted') attachOrientation(); else statusEl().textContent = 'Permission boussole refusée';
+      }).catch(e => statusEl().textContent = 'boussole: ' + e);
+    } else {
+      attachOrientation();
+    }
+  }
 
-function updateArrow() {
-	const aEl = arrowEl();
-	if (!aEl) return;
-	if (!target) { aEl.style.opacity = '0.25'; return; }
-	if (!currentPos) { aEl.style.opacity = '0.6'; statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
-	const brng = bearingBetween(currentPos, target);
-	let angleToRotate = brng;
-	if (deviceHeading !== null) {
-		angleToRotate = (brng - deviceHeading + 360) % 360;
-	}
-	aEl.style.opacity = '1';
-	aEl.style.transform = `rotate(${angleToRotate}deg)`;
-	distanceEl().textContent = `Distance : ${Math.round(distanceBetween(currentPos,target))} m`;
-	if (currentAccuracy !== null) {
-		let perc = Math.max(0, Math.min(1, 100/currentAccuracy));
-		precisionFillEl().style.width = (perc*100)+"%";
-	}
-}
+  function attachOrientation() {
+    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    window.addEventListener('deviceorientation', handleOrientation, true);
+  }
 
-window.addEventListener('load', () => {
-	const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
-	document.getElementById('select-btn').addEventListener('click', (e) => {
-		selecting = !selecting;
-		e.target.textContent = selecting ? 'Cliquez sur la carte...' : 'Sélectionner sur la carte';
-	});
-	document.getElementById('locate').addEventListener('click', () => {
-		if (currentPos) map.panTo(currentPos);
-	});
-	startPositionWatch();
-	document.getElementById('search-input').addEventListener('focus', requestDeviceOrientationPermissionIfNeeded, { once: true });
-	document.getElementById('select-btn').addEventListener('click', requestDeviceOrientationPermissionIfNeeded, { once: true });
-});
+  function handleOrientation(e) {
+    let alpha = null;
+    if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
+    else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading;
+    else if (typeof e.alpha === 'number') alpha = e.alpha;
+    if (alpha === null) return;
+    deviceHeading = 360 - alpha;
+    updateArrow();
+  }
 
-	
-	
-	</script>
+  function toRad(d){return d*Math.PI/180}
+  function toDeg(r){return r*180/Math.PI}
 
-  
+  function bearingBetween(start, end){
+    const lat1 = toRad(start.lat), lat2 = toRad(end.lat);
+    const dLon = toRad(end.lng - start.lng);
+    const y = Math.sin(dLon)*Math.cos(lat2);
+    const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+    let brng = toDeg(Math.atan2(y,x));
+    brng = (brng + 360) % 360;
+    return brng;
+  }
+
+  function distanceBetween(start, end){
+    const R = 6371e3;
+    const φ1 = toRad(start.lat), φ2 = toRad(end.lat);
+    const Δφ = toRad(end.lat-start.lat);
+    const Δλ = toRad(end.lng-start.lng);
+    const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R*c;
+  }
+
+  function updateArrow() {
+    if (!inArrowMode) return;
+    const aEl = arrowEl();
+    if (!aEl || !target) return;
+    if (!currentPos) { statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
+    const brng = bearingBetween(currentPos, target);
+    let angleToRotate = brng;
+    if (deviceHeading !== null) {
+      angleToRotate = (brng - deviceHeading + 360) % 360;
+    }
+    aEl.style.transform = `rotate(${angleToRotate}deg)`;
+    distanceEl().textContent = `Distance : ${Math.round(distanceBetween(currentPos,target))} m`;
+    if (currentAccuracy !== null) {
+      let perc = Math.max(0, Math.min(1, 100/currentAccuracy));
+      precisionFillEl().style.width = (perc*100)+"%";
+      let spread = Math.min(80, Math.max(10, currentAccuracy/2));
+      coneEl().style.transform = `translate(-50%,-50%) rotate(${angleToRotate}deg) scaleY(${spread/50})`;
+    }
+  }
+
+  window.addEventListener('load', () => {
+    const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
+    document.getElementById('select-btn').addEventListener('click', (e) => {
+      selecting = !selecting;
+      e.target.textContent = selecting ? 'Cliquez sur la carte...' : 'Sélectionner sur la carte';
+    });
+    document.getElementById('locate').addEventListener('click', () => {
+      if (currentPos) map.panTo(currentPos);
+    });
+    backBtn().addEventListener('click', exitArrowMode);
+    startPositionWatch();
+    document.getElementById('search-input').addEventListener('focus', requestDeviceOrientationPermissionIfNeeded, { once: true });
+    document.getElementById('select-btn').addEventListener('click', requestDeviceOrientationPermissionIfNeeded, { once: true });
+  });
+  </script>
 </body>
 </html>
