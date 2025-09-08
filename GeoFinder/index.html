@@ -29,7 +29,7 @@
 </head>
 <body>
   <div id="app">
-    <div id="header">GeoFinder v4</div>
+    <div id="header">GeoFinder v5</div>
     <div id="controls">
       <input id="search-input" placeholder="Rechercher une adresse" autocomplete="off">
       <button id="select-btn">Sélectionner sur la carte</button>
@@ -223,21 +223,47 @@
     if (!inArrowMode) return;
     const aEl = arrowEl();
     if (!aEl || !target) return;
-    if (!currentPos) { statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
+    if (!currentPos) { 
+      statusEl().textContent = 'Cible définie — attente position GPS...'; 
+      return; 
+    }
+  
     const brng = bearingBetween(currentPos, target);
     let angleToRotate = brng;
     if (deviceHeading !== null) {
       angleToRotate = (brng - deviceHeading + 360) % 360;
     }
+  
+    // Flèche
     aEl.style.transform = `rotate(${angleToRotate}deg)`;
+  
+    // Distance
     distanceEl().textContent = `Distance : ${Math.round(distanceBetween(currentPos,target))} m`;
+  
+    // Précision
     if (currentAccuracy !== null) {
       let perc = Math.max(0, Math.min(1, 100/currentAccuracy));
       precisionFillEl().style.width = (perc*100)+"%";
-      let spread = Math.min(80, Math.max(10, currentAccuracy/2));
-      coneEl().style.transform = `translate(-50%,-50%) rotate(${angleToRotate}deg) scaleY(${spread/50})`;
+  
+      // Cône recalculé en fonction de la précision
+      const spread = Math.min(60, Math.max(5, currentAccuracy/2)); // angle en degrés
+      const radians = (spread * Math.PI) / 180;
+  
+      // On redessine le path du cône
+      const conePath = document.getElementById("cone-path");
+      const r = 100; // rayon du cône
+      const x1 = 100 - r * Math.sin(radians);
+      const y1 = 100 + r * Math.cos(radians);
+      const x2 = 100 + r * Math.sin(radians);
+      const y2 = y1;
+  
+      conePath.setAttribute("d", `M100,100 L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z`);
+  
+      // rotation du cône
+      coneEl().style.transform = `translate(-50%,-50%) rotate(${angleToRotate}deg)`;
     }
   }
+
 
   window.addEventListener('load', () => {
     const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
