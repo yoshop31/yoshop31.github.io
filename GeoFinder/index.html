@@ -33,6 +33,7 @@
 	@media (max-width:420px){#arrow{font-size:100px}}
   </style>
 </head>
+	
 <body>
 	<div id="app">
 		<div id="controls">
@@ -62,32 +63,107 @@
 	<script>
 	
 	let map, marker, target = null;
-	DeviceOrientationEvent.requestPermission().then(resp => {
-	if (resp === 'granted') attachOrientation(); else statusEl().textContent = 'Permission boussole refusée';
-	}).catch(e => statusEl().textContent = 'boussole: ' + e);
-	} else {
-	attachOrientation();
+	let watchId = null;
+	let deviceHeading = null; // cap mesuré par la boussole
+	let currentPos = null;
+	let selecting = false;
+	
+	
+	const statusEl = () => document.getElementById('status');
+	const arrowEl = () => document.getElementById('arrow');
+
+		
+	function initMapOnceReady() {
+		// map sera initialisé automatiquement par le script Google Maps si la clé est valide
+		const defaultPos = { lat: 48.8566, lng: 2.3522 };
+		map = new google.maps.Map(document.getElementById('map'), {
+			center: defaultPos,
+			zoom: 13,
+			mapTypeControl: false
+		});
+		
+		
+		marker = new google.maps.Marker({ map, draggable: false });
+		
+		
+		// Autocomplete
+		const input = document.getElementById('search-input');
+		const ac = new google.maps.places.Autocomplete(input, { fields: ['geometry','formatted_address','name'] });
+		ac.addListener('place_changed', () => {
+			const place = ac.getPlace();
+			if (!place.geometry) return;
+			const loc = place.geometry.location;
+			setTarget({ lat: loc.lat(), lng: loc.lng() }, place.formatted_address || place.name);
+			map.panTo(loc);
+			map.setZoom(16);
+		});
+		
+		
+		// click to select
+		map.addListener('click', (e) => {
+			if (!selecting) return;
+			setTarget({ lat: e.latLng.lat(), lng: e.latLng.lng() }, 'Point choisi');
+			selecting = false;
+			document.getElementById('select-btn').textContent = 'Sélectionner sur la carte';
+		});
 	}
+		
+		
+	function setTarget(latlng, label) {
+		target = latlng;
+		marker.setPosition(latlng);
+		marker.setMap(map);
+		statusEl().textContent = `Cible : ${label || ''} (${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)})`;
+		updateArrow();
 	}
 
+		
+	function startPositionWatch() {
+		if (!('geolocation' in navigator)) { statusEl().textContent = 'Géo non supportée'; return; }
+		watchId = navigator.geolocation.watchPosition(pos => {
+		currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+		// centrer optionnel
+		//map.panTo(currentPos);
+		updateArrow();
+		}, err => {
+		statusEl().textContent = 'Erreur position: ' + err.message;
+		}, { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
+	}
+	
+	
+	function stopPositionWatch() {
+		if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+	}
+	
+	
+	function requestDeviceOrientationPermissionIfNeeded() {
+		// iOS 13+ requires permission via a user gesture
+		if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+		DeviceOrientationEvent.requestPermission().then(resp => {
+		if (resp === 'granted') attachOrientation(); else statusEl().textContent = 'Permission boussole refusée';
+		}).catch(e => statusEl().textContent = 'boussole: ' + e);
+		} else {
+		attachOrientation();
+		}
+	}
 
 	function attachOrientation() {
-	window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-	window.addEventListener('deviceorientation', handleOrientation, true);
+		window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+		window.addEventListener('deviceorientation', handleOrientation, true);
 	}
 
 
 	function handleOrientation(e) {
-	// utiliser absolute si disponible, fallback sur alpha
-	let alpha = null;
-	if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
-	else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading; // iOS
-	else if (typeof e.alpha === 'number') alpha = e.alpha;
-	if (alpha === null) return;
-	// alpha est angle en degrés: 0 = device faces north
-	// normalisons
-	deviceHeading = 360 - alpha; // expérimenté pour faire pointer correctement
-	updateArrow();
+		// utiliser absolute si disponible, fallback sur alpha
+		let alpha = null;
+		if (e.absolute && typeof e.alpha === 'number') alpha = e.alpha;
+		else if (typeof e.webkitCompassHeading === 'number') alpha = e.webkitCompassHeading; // iOS
+		else if (typeof e.alpha === 'number') alpha = e.alpha;
+		if (alpha === null) return;
+		// alpha est angle en degrés: 0 = device faces north
+		// normalisons
+		deviceHeading = 360 - alpha; // expérimenté pour faire pointer correctement
+		updateArrow();
 	}
 
 
@@ -96,59 +172,59 @@
 
 
 	function bearingBetween(start, end){
-	// start/end are {lat,lng}
-	const lat1 = toRad(start.lat), lat2 = toRad(end.lat);
-	const dLon = toRad(end.lng - start.lng);
-	const y = Math.sin(dLon)*Math.cos(lat2);
-	const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-	let brng = toDeg(Math.atan2(y,x));
-	brng = (brng + 360) % 360;
-	return brng;
+		// start/end are {lat,lng}
+		const lat1 = toRad(start.lat), lat2 = toRad(end.lat);
+		const dLon = toRad(end.lng - start.lng);
+		const y = Math.sin(dLon)*Math.cos(lat2);
+		const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+		let brng = toDeg(Math.atan2(y,x));
+		brng = (brng + 360) % 360;
+		return brng;
 	}
 
 
 	function updateArrow() {
-	const aEl = arrowEl();
-	if (!aEl) return;
-	if (!target) { aEl.style.opacity = '0.25'; aEl.style.transform = 'rotate(0deg)'; return; }
-	if (!currentPos) { aEl.style.opacity = '0.6'; aEl.style.transform = 'rotate(0deg)'; statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
-	const brng = bearingBetween(currentPos, target); // nord->target
-	statusEl().textContent = `Cap vers cible: ${brng.toFixed(0)}°`;
-
-
-	let angleToRotate = brng; // angle (deg) from north to target
-	if (deviceHeading !== null) {
-	// la flèche doit tourner pour compenser l'orientation du device
-	// si deviceHeading = 0 (north up), on doit tourner de brng
-	// si deviceHeading = 90 (East), la flèche doit tourner de brng - 90
-	angleToRotate = (brng - deviceHeading + 360) % 360;
-	}
-	aEl.style.opacity = '1';
-	aEl.style.transform = `rotate(${angleToRotate}deg)`;
+		const aEl = arrowEl();
+		if (!aEl) return;
+		if (!target) { aEl.style.opacity = '0.25'; aEl.style.transform = 'rotate(0deg)'; return; }
+		if (!currentPos) { aEl.style.opacity = '0.6'; aEl.style.transform = 'rotate(0deg)'; statusEl().textContent = 'Cible définie — attente position GPS...'; return; }
+		const brng = bearingBetween(currentPos, target); // nord->target
+		statusEl().textContent = `Cap vers cible: ${brng.toFixed(0)}°`;
+	
+	
+		let angleToRotate = brng; // angle (deg) from north to target
+		if (deviceHeading !== null) {
+		// la flèche doit tourner pour compenser l'orientation du device
+		// si deviceHeading = 0 (north up), on doit tourner de brng
+		// si deviceHeading = 90 (East), la flèche doit tourner de brng - 90
+		angleToRotate = (brng - deviceHeading + 360) % 360;
+		}
+		aEl.style.opacity = '1';
+		aEl.style.transform = `rotate(${angleToRotate}deg)`;
 	}
 
 
 	// UI wiring
 	window.addEventListener('load', () => {
-	// attendre que la maps API ait défini `google` avant d'initialiser ce qui en dépend
-	const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
-
-
-	document.getElementById('select-btn').addEventListener('click', (e) => {
-	selecting = !selecting;
-	e.target.textContent = selecting ? 'Cliquez sur la carte...' : 'Sélectionner sur la carte';
-	});
-
-
-	document.getElementById('locate').addEventListener('click', () => {
-	if (currentPos) map.panTo(currentPos);
-	});
-
-
-	// démarrer GPS et orientation au chargement (après un geste utilisateur si nécessaire)
-	startPositionWatch();
-	document.getElementById('search-input').addEventListener('focus', requestDeviceOrientationPermissionIfNeeded, { once: true });
-	document.getElementById('select-btn').addEventListener('click', requestDeviceOrientationPermissionIfNeeded, { once: true });
+		// attendre que la maps API ait défini `google` avant d'initialiser ce qui en dépend
+		const interval = setInterval(() => { if (window.google && google.maps) { clearInterval(interval); initMapOnceReady(); } }, 200);
+	
+	
+		document.getElementById('select-btn').addEventListener('click', (e) => {
+			selecting = !selecting;
+			e.target.textContent = selecting ? 'Cliquez sur la carte...' : 'Sélectionner sur la carte';
+		});
+	
+	
+		document.getElementById('locate').addEventListener('click', () => {
+			if (currentPos) map.panTo(currentPos);
+		});
+	
+	
+		// démarrer GPS et orientation au chargement (après un geste utilisateur si nécessaire)
+		startPositionWatch();
+		document.getElementById('search-input').addEventListener('focus', requestDeviceOrientationPermissionIfNeeded, { once: true });
+		document.getElementById('select-btn').addEventListener('click', requestDeviceOrientationPermissionIfNeeded, { once: true });
 	});
 	
 	
