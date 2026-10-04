@@ -1,11 +1,15 @@
-import { createGame, isGameState, playMove } from './game.js';
+import { createGame, migrateGameState, moveElephant, playMove } from './game.js';
 import { loadGame, saveGame } from './storage.js';
 
 export async function loadSavedGame() {
-  const state = await loadGame();
-  if (state !== null && !isGameState(state)) {
+  const savedState = await loadGame();
+  if (savedState === null) return null;
+
+  const state = migrateGameState(savedState);
+  if (state === null) {
     throw new Error('La sauvegarde locale est invalide. Démarrez une nouvelle partie pour la remplacer.');
   }
+  if (state !== savedState) await saveGame(state);
   return state;
 }
 
@@ -17,6 +21,12 @@ export async function startGame(boardId) {
 
 export async function playGameMove(state, action) {
   const nextState = playMove(state, action);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export async function moveGameElephant(state, action) {
+  const nextState = moveElephant(state, action);
   await saveGame(nextState);
   return nextState;
 }

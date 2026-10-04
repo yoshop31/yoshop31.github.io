@@ -1,0 +1,3 @@
+Lancer un serveur web :
+	depuis le terminal VSCode
+	python -m http.server 8000

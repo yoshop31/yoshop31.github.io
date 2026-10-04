@@ -6,7 +6,7 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-1.2';
+var cache_storage_name = 'strategeti-1.6';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
@@ -30,6 +30,8 @@ self.addEventListener('install', function (e) {
 		return Promise.all(first_cache_urls.map(function (url) {
 			return cache.add(url);
 		}));
+	}).then(function () {
+		return self.skipWaiting();
 	}));
 });
 

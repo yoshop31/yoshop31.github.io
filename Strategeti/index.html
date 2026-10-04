@@ -57,8 +57,24 @@
         <div class="stock" id="black-stock" aria-label="Stock des pièces noires"></div>
       </section>
 
-      <div class="board-wrap">
-        <div class="board" id="game-board" role="grid" aria-label="Plateau de jeu 4 par 4"></div>
+      <div class="board-area">
+        <div class="board-wrap">
+          <div class="board" id="game-board" role="grid" aria-label="Plateau de jeu 4 par 4"></div>
+        </div>
+        <aside class="captured-stock" id="captured-stock" aria-labelledby="captured-title">
+          <h2 id="captured-title">Mangées</h2>
+          <p class="captured-empty" id="captured-empty">Aucune</p>
+          <div class="captured-groups">
+            <section aria-label="Pièces mangées blanches">
+              <h3><span class="player-stone stone-white" aria-hidden="true"></span>Blanc</h3>
+              <div class="captured-pieces" id="white-captured"></div>
+            </section>
+            <section aria-label="Pièces mangées noires">
+              <h3><span class="player-stone stone-black" aria-hidden="true"></span>Noir</h3>
+              <div class="captured-pieces" id="black-captured"></div>
+            </section>
+          </div>
+        </aside>
       </div>
 
       <section class="player-zone player-white" aria-labelledby="white-title">
