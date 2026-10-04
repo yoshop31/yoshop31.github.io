@@ -1,4 +1,14 @@
-import { createGame, migrateGameState, moveElephant, playMove } from './game.js';
+import {
+  createGame,
+  finishGazelleMove,
+  getGazelleJumpDestinations,
+  migrateGameState,
+  moveElephant,
+  moveGazelle,
+  moveLion,
+  moveZebra,
+  playMove
+} from './game.js';
 import { loadGame, saveGame } from './storage.js';
 
 export async function loadSavedGame() {
@@ -27,6 +37,34 @@ export async function playGameMove(state, action) {
 
 export async function moveGameElephant(state, action) {
   const nextState = moveElephant(state, action);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export async function moveGameZebra(state, action) {
+  const nextState = moveZebra(state, action);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export async function moveGameLion(state, action) {
+  const nextState = moveLion(state, action);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export function getGazelleMoves(state, fromIndex) {
+  return getGazelleJumpDestinations(state, fromIndex);
+}
+
+export async function moveGameGazelle(state, action) {
+  const nextState = moveGazelle(state, action);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export async function finishGameGazelleMove(state) {
+  const nextState = finishGazelleMove(state);
   await saveGame(nextState);
   return nextState;
 }

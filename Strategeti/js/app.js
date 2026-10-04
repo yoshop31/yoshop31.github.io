@@ -1,9 +1,33 @@
-import { BOARD_SIZE, PIECES, PLAYERS } from './game.js';
-import { loadSavedGame, moveGameElephant, playGameMove, startGame } from './game-api.js';
+import {
+  ADVANCED_BOARD_ID,
+  BOARD_ID,
+  BOARD_SIZE,
+  getBoardName,
+  isPlacementAllowed,
+  PIECES,
+  PLAYERS
+} from './game.js';
+import {
+  finishGameGazelleMove,
+  getGazelleMoves,
+  loadSavedGame,
+  moveGameElephant,
+  moveGameGazelle,
+  moveGameLion,
+  moveGameZebra,
+  playGameMove,
+  startGame
+} from './game-api.js';
 
 const setupPanel = document.querySelector('#setup-panel');
 const gamePanel = document.querySelector('#game-panel');
 const boardElement = document.querySelector('#game-board');
+const boardNameElement = document.querySelector('#board-name');
+const boardHeading = document.querySelector('#board-heading');
+const placementRuleHint = document.querySelector('#placement-rule-hint');
+const gameResult = document.querySelector('#game-result');
+const gameResultWinner = document.querySelector('#game-result-winner');
+const gameResultReason = document.querySelector('#game-result-reason');
 const turnIndicator = document.querySelector('#turn-indicator');
 const gameMessage = document.querySelector('#game-message');
 const saveStatus = document.querySelector('#save-status');
@@ -15,10 +39,13 @@ const confirmTitle = document.querySelector('#confirm-title');
 const confirmMessage = document.querySelector('#confirm-message');
 const confirmAction = document.querySelector('#confirm-action');
 const capturedStock = document.querySelector('#captured-stock');
+const gazelleMoveControls = document.querySelector('#gazelle-move-controls');
+const gazelleMoveProgress = document.querySelector('#gazelle-move-progress');
+const finishGazelleMoveButton = document.querySelector('#finish-gazelle-move');
 
 let gameState = null;
 let selectedPiece = null;
-let selectedElephantIndex = null;
+let selectedBoardPiece = null;
 let pendingOperation = null;
 let isSaving = false;
 
@@ -57,6 +84,7 @@ function describeStock(player) {
       button.className = 'piece-choice';
       button.disabled = isSaving ||
         gameState.status !== 'playing' ||
+        gameState.gazelleMove !== null ||
         gameState.currentPlayer !== player;
       button.setAttribute('aria-pressed', String(
         selectedPiece?.pieceId === piece.id &&
@@ -69,7 +97,7 @@ function describeStock(player) {
         const isSelected = selectedPiece?.pieceId === piece.id &&
           selectedPiece.instanceIndex === instanceIndex;
         selectedPiece = isSelected ? null : { pieceId: piece.id, instanceIndex };
-        selectedElephantIndex = null;
+        selectedBoardPiece = null;
         gameMessage.textContent = selectedPiece
           ? `${piece.name} sélectionné. Choisissez une case vide pour le poser.`
           : 'Sélection annulée.';
@@ -88,47 +116,119 @@ function isAdjacent(firstIndex, secondIndex) {
   return rowDistance + columnDistance === 1;
 }
 
-function selectElephant(index) {
+function selectBoardPiece(index) {
+  const piece = gameState.board[index];
   selectedPiece = null;
-  selectedElephantIndex = index;
-  gameMessage.textContent = 'Choisissez une case adjacente. Les animaux devant l’éléphant seront poussés.';
+  selectedBoardPiece = { index, pieceId: piece.pieceId };
+  if (piece.pieceId === 'elephant') {
+    gameMessage.textContent = 'Choisissez une case adjacente. Les animaux devant l’éléphant seront poussés.';
+  } else if (piece.pieceId === 'lion') {
+    gameMessage.textContent = 'Choisissez une case adjacente horizontalement ou verticalement. Le lion peut manger un zèbre ou une gazelle.';
+  } else if (piece.pieceId === 'gazelle') {
+    gameMessage.textContent = 'Choisissez une case d’atterrissage après avoir sauté par-dessus une suite d’animaux.';
+  } else {
+    gameMessage.textContent = 'Choisissez une case vide sur la ligne droite ou diagonale du zèbre. Les autres pièces lui barrent le passage.';
+  }
   renderGame();
 }
 
 function renderBoard() {
   boardElement.replaceChildren();
+  const gazelleDestinations = selectedBoardPiece?.pieceId === 'gazelle'
+    ? getGazelleMoves(gameState, selectedBoardPiece.index)
+    : [];
+  const gazellePath = gameState.gazelleMove?.path ?? [];
   gameState.board.forEach((cell, index) => {
     const button = document.createElement('button');
     const row = Math.floor(index / BOARD_SIZE) + 1;
     const column = (index % BOARD_SIZE) + 1;
-    const canMoveToCell = selectedElephantIndex !== null &&
-      (index === selectedElephantIndex || isAdjacent(selectedElephantIndex, index));
-    const canSelectElephant = selectedElephantIndex === null &&
+    const canMoveToCell = selectedBoardPiece !== null &&
+      (index === selectedBoardPiece.index ||
+        (selectedBoardPiece.pieceId === 'elephant'
+          ? isAdjacent(selectedBoardPiece.index, index)
+          : selectedBoardPiece.pieceId === 'lion'
+            ? isLionMoveAvailable(selectedBoardPiece.index, index)
+            : selectedBoardPiece.pieceId === 'gazelle'
+              ? gazelleDestinations.includes(index)
+              : isZebraMoveAvailable(selectedBoardPiece.index, index)));
+    const canSelectPiece = selectedBoardPiece === null &&
       cell?.player === gameState.currentPlayer &&
-      cell.pieceId === 'elephant';
+      (cell.pieceId === 'elephant' || cell.pieceId === 'lion' ||
+       cell.pieceId === 'zebra' || cell.pieceId === 'gazelle');
     button.type = 'button';
-    button.className = `board-cell${cell ? ` occupied ${cell.player}` : ''}${selectedElephantIndex === index ? ' selected-source' : ''}`;
+    button.className = `board-cell${cell ? ` occupied ${cell.player}` : ''}${selectedBoardPiece?.index === index ? ' selected-source' : ''}${gazellePath.includes(index) ? ' jump-path' : ''}${gazelleDestinations.includes(index) ? ' jump-target' : ''}`;
     button.setAttribute('role', 'gridcell');
     button.setAttribute('aria-rowindex', String(row));
     button.setAttribute('aria-colindex', String(column));
     button.disabled = isSaving ||
       gameState.status !== 'playing' ||
-      !(selectedElephantIndex !== null ? canMoveToCell : canSelectElephant || !cell);
+      (selectedPiece !== null && !cell &&
+       !isPlacementAllowed(gameState.boardId, index)) ||
+      !(selectedBoardPiece !== null ? canMoveToCell : canSelectPiece || !cell);
 
     if (cell) {
       const piece = PIECES.find(item => item.id === cell.pieceId);
       button.setAttribute('aria-label', `Ligne ${row}, colonne ${column} : ${piece.name}, ${PLAYERS[cell.player].name}`);
-      if (cell.player === gameState.currentPlayer && cell.pieceId === 'elephant') {
-        button.setAttribute('aria-pressed', String(selectedElephantIndex === index));
+      if (cell.player === gameState.currentPlayer &&
+          (cell.pieceId === 'elephant' || cell.pieceId === 'lion' ||
+           cell.pieceId === 'zebra' || cell.pieceId === 'gazelle')) {
+        button.setAttribute('aria-pressed', String(selectedBoardPiece?.index === index));
       }
       button.innerHTML = `<span class="board-piece" aria-hidden="true">${piece.icon}</span><span class="board-owner">${PLAYERS[cell.player].name}</span>`;
     } else {
-      button.setAttribute('aria-label', `Ligne ${row}, colonne ${column} : case vide`);
-      button.innerHTML = '<span class="empty-marker" aria-hidden="true"></span>';
+      const placementAllowed = isPlacementAllowed(gameState.boardId, index);
+      button.setAttribute('aria-label',
+        `Ligne ${row}, colonne ${column} : case vide${placementAllowed ? '' : ', pose interdite'}`);
+      button.classList.toggle('placement-forbidden', !placementAllowed);
+      button.innerHTML = `<span class="empty-marker" aria-hidden="true"></span>${placementAllowed ? '' : '<span class="forbidden-marker" aria-hidden="true">×</span>'}`;
     }
     button.addEventListener('click', () => handleBoardClick(index));
     boardElement.append(button);
   });
+}
+
+function isZebraMoveAvailable(fromIndex, toIndex) {
+  const fromRow = Math.floor(fromIndex / BOARD_SIZE);
+  const fromColumn = fromIndex % BOARD_SIZE;
+  const toRow = Math.floor(toIndex / BOARD_SIZE);
+  const toColumn = toIndex % BOARD_SIZE;
+  const rowDistance = Math.abs(toRow - fromRow);
+  const columnDistance = Math.abs(toColumn - fromColumn);
+  if (rowDistance !== columnDistance && rowDistance !== 0 && columnDistance !== 0) return false;
+  if (gameState.board[toIndex] !== null) return false;
+
+  const rowStep = Math.sign(toRow - fromRow);
+  const columnStep = Math.sign(toColumn - fromColumn);
+  let row = fromRow + rowStep;
+  let column = fromColumn + columnStep;
+  while (row !== toRow || column !== toColumn) {
+    if (gameState.board[row * BOARD_SIZE + column] !== null) return false;
+    row += rowStep;
+    column += columnStep;
+  }
+  return rowDistance !== 0 || columnDistance !== 0;
+}
+
+function isLionMoveAvailable(fromIndex, toIndex) {
+  if (!isAdjacent(fromIndex, toIndex)) return false;
+  const destination = gameState.board[toIndex];
+  return destination === null ||
+    destination.pieceId === 'gazelle' ||
+    destination.pieceId === 'zebra';
+}
+
+function renderGazelleMoveControls() {
+  const gazelleMove = gameState.gazelleMove;
+  gazelleMoveControls.hidden = gazelleMove === null;
+  if (gazelleMove === null) return;
+
+  const jumpCount = gazelleMove.path.length - 1;
+  const route = gazelleMove.path.map(index =>
+    `L${Math.floor(index / BOARD_SIZE) + 1}C${index % BOARD_SIZE + 1}`
+  ).join(' → ');
+  gazelleMoveProgress.textContent =
+    `${jumpCount} saut${jumpCount === 1 ? '' : 's'} effectué${jumpCount === 1 ? '' : 's'} · Trajet : ${route}`;
+  finishGazelleMoveButton.disabled = isSaving;
 }
 
 function renderCapturedStock() {
@@ -153,47 +253,90 @@ function renderCapturedStock() {
 }
 
 function renderGame() {
+  const currentBoardName = getBoardName(gameState.boardId);
+  boardNameElement.textContent = currentBoardName;
+  boardHeading.textContent = currentBoardName;
+  placementRuleHint.textContent = gameState.boardId === ADVANCED_BOARD_ID
+    ? 'Les quatre cases centrales sont interdites à la pose (×) ; les déplacements sur ces cases restent autorisés.'
+    : 'Les quatre coins sont interdits à la pose (×) ; les déplacements sur ces cases restent autorisés.';
   renderBoard();
+  renderGazelleMoveControls();
   describeStock('black');
   describeStock('white');
   renderCapturedStock();
 
   if (gameState.status === 'finished') {
-    turnIndicator.textContent = `${PLAYERS[gameState.winner].name} gagne`;
+    const winner = PLAYERS[gameState.winner].name;
+    turnIndicator.textContent = `${winner} gagne`;
     const capturedByWhite = gameState.captured.filter(piece => piece.player === 'white').length;
     const capturedByBlack = gameState.captured.filter(piece => piece.player === 'black').length;
-    if (capturedByWhite >= 5 || capturedByBlack >= 5) {
+    gameResult.hidden = false;
+    gameResultWinner.textContent = `Victoire de ${winner} !`;
+    if (gameState.endReason === 'alignment') {
+      gameResultReason.textContent = 'Quatre pièces de la même couleur sont alignées.';
+    } else if (gameState.endReason === 'captures' || capturedByWhite >= 5 || capturedByBlack >= 5) {
       const loser = capturedByWhite >= 5 ? 'blanches' : 'noires';
-      gameMessage.textContent = `${PLAYERS[gameState.winner].name} gagne : cinq pièces ${loser} ont été mangées.`;
+      gameResultReason.textContent = `Cinq pièces ${loser} ont été mangées.`;
+    } else if (gameState.endReason === 'no-moves') {
+      gameResultReason.textContent = `${PLAYERS[gameState.currentPlayer].name} n’a plus de coup légal.`;
     } else {
-      gameMessage.textContent = `${PLAYERS[gameState.currentPlayer].name} n’a plus de coup légal.`;
+      gameResultReason.textContent = 'La partie est terminée.';
     }
+    gameMessage.textContent = '';
   } else {
+    gameResult.hidden = true;
     turnIndicator.textContent = `Au tour de ${PLAYERS[gameState.currentPlayer].name}`;
     if (!gameMessage.textContent) {
-      gameMessage.textContent = selectedElephantIndex !== null
-        ? 'Choisissez une case adjacente pour déplacer l’éléphant.'
+      gameMessage.textContent = selectedBoardPiece !== null
+        ? selectedBoardPiece.pieceId === 'elephant'
+          ? 'Choisissez une case adjacente pour déplacer l’éléphant.'
+          : selectedBoardPiece.pieceId === 'lion'
+            ? 'Choisissez une case adjacente horizontalement ou verticalement pour déplacer le lion.'
+            : selectedBoardPiece.pieceId === 'gazelle'
+              ? 'Choisissez une case d’atterrissage après avoir sauté par-dessus une suite d’animaux.'
+              : 'Choisissez une case vide sur la ligne droite ou diagonale du zèbre.'
         : selectedPiece
           ? 'Choisissez une case vide pour poser la pièce.'
-          : `Au tour de ${PLAYERS[gameState.currentPlayer].name} : posez une pièce ou sélectionnez un éléphant à déplacer.`;
+          : `Au tour de ${PLAYERS[gameState.currentPlayer].name} : posez une pièce ou sélectionnez un éléphant, un lion, un zèbre ou une gazelle à déplacer.`;
     }
+  }
+
+  if (gameState.gazelleMove !== null && gameState.status === 'playing') {
+    const currentIndex = gameState.gazelleMove.path[gameState.gazelleMove.path.length - 1];
+    const nextJumps = getGazelleMoves(gameState, currentIndex);
+    gameMessage.textContent = nextJumps.length > 0
+      ? 'Choisissez un nouvel atterrissage pour enchaîner un saut, ou terminez le déplacement.'
+      : 'Aucun autre saut possible : terminez le déplacement.';
   }
 }
 
 function handleBoardClick(index) {
   const cell = gameState.board[index];
-  if (selectedElephantIndex !== null) {
-    if (index === selectedElephantIndex) {
-      selectedElephantIndex = null;
+  if (selectedBoardPiece !== null) {
+    if (index === selectedBoardPiece.index) {
+      if (gameState.gazelleMove !== null) return;
+      selectedBoardPiece = null;
       gameMessage.textContent = 'Déplacement annulé.';
       renderGame();
-    } else if (isAdjacent(selectedElephantIndex, index)) {
-      moveElephantTo(index);
+    } else if (selectedBoardPiece.pieceId === 'elephant' &&
+        isAdjacent(selectedBoardPiece.index, index)) {
+      moveSelectedPieceTo(index);
+    } else if (selectedBoardPiece.pieceId === 'lion' &&
+        isLionMoveAvailable(selectedBoardPiece.index, index)) {
+      moveSelectedPieceTo(index);
+    } else if (selectedBoardPiece.pieceId === 'gazelle' &&
+        getGazelleMoves(gameState, selectedBoardPiece.index).includes(index)) {
+      moveSelectedPieceTo(index);
+    } else if (selectedBoardPiece.pieceId === 'zebra' && !cell &&
+        isZebraMoveAvailable(selectedBoardPiece.index, index)) {
+      moveSelectedPieceTo(index);
     }
     return;
   }
-  if (cell?.player === gameState.currentPlayer && cell.pieceId === 'elephant') {
-    selectElephant(index);
+  if (cell?.player === gameState.currentPlayer &&
+      (cell.pieceId === 'elephant' || cell.pieceId === 'lion' ||
+       cell.pieceId === 'zebra' || cell.pieceId === 'gazelle')) {
+    selectBoardPiece(index);
   } else if (!cell) {
     placePiece(index);
   }
@@ -213,7 +356,7 @@ async function placePiece(cellIndex) {
     const nextState = await playGameMove(gameState, { cellIndex, pieceId: selectedPiece.pieceId });
     gameState = nextState;
     selectedPiece = null;
-    selectedElephantIndex = null;
+    selectedBoardPiece = null;
     gameMessage.textContent = '';
     setSaveStatus('Partie sauvegardée sur cet appareil.');
   } catch (error) {
@@ -224,21 +367,57 @@ async function placePiece(cellIndex) {
   }
 }
 
-async function moveElephantTo(toIndex) {
-  if (isSaving || selectedElephantIndex === null) return;
-  const fromIndex = selectedElephantIndex;
+async function moveSelectedPieceTo(toIndex) {
+  if (isSaving || selectedBoardPiece === null) return;
+  const { index: fromIndex, pieceId } = selectedBoardPiece;
   try {
     isSaving = true;
     setSaveStatus('Enregistrement…');
     renderGame();
-    const nextState = await moveGameElephant(gameState, { fromIndex, toIndex });
-    const wasCaptured = nextState.captured.length > gameState.captured.length;
+    const move = pieceId === 'elephant'
+      ? moveGameElephant
+      : pieceId === 'lion'
+        ? moveGameLion
+        : pieceId === 'gazelle'
+          ? moveGameGazelle
+          : moveGameZebra;
+    const nextState = await move(gameState, { fromIndex, toIndex });
+    const isGazelleJump = pieceId === 'gazelle';
+    const wasCaptured = !isGazelleJump &&
+      nextState.captured.length > gameState.captured.length;
     gameState = nextState;
-    selectedPiece = null;
-    selectedElephantIndex = null;
-    gameMessage.textContent = wasCaptured
-      ? 'Déplacement effectué : une pièce a été mangée.'
-      : 'Déplacement effectué.';
+    if (isGazelleJump) {
+      selectedBoardPiece = { index: toIndex, pieceId };
+      const nextJumps = getGazelleMoves(gameState, toIndex);
+      gameMessage.textContent = nextJumps.length > 0
+        ? 'Saut effectué. Choisissez le prochain saut ou terminez le déplacement.'
+        : 'Saut effectué. Aucun autre saut possible : terminez le déplacement.';
+    } else {
+      selectedPiece = null;
+      selectedBoardPiece = null;
+      gameMessage.textContent = wasCaptured
+        ? 'Déplacement effectué : une pièce a été mangée.'
+        : 'Déplacement effectué.';
+    }
+    setSaveStatus('Partie sauvegardée sur cet appareil.');
+  } catch (error) {
+    gameMessage.textContent = error.message;
+    setSaveStatus(error.message, true);
+  } finally {
+    isSaving = false;
+    renderGame();
+  }
+}
+
+async function finishGazelleMove() {
+  if (isSaving || gameState.gazelleMove === null) return;
+  try {
+    isSaving = true;
+    setSaveStatus('Enregistrement…');
+    renderGame();
+    gameState = await finishGameGazelleMove(gameState);
+    selectedBoardPiece = null;
+    gameMessage.textContent = '';
     setSaveStatus('Partie sauvegardée sur cet appareil.');
   } catch (error) {
     gameMessage.textContent = error.message;
@@ -258,7 +437,7 @@ async function beginGame(action) {
     const nextState = await startGame(action.boardId);
     gameState = nextState;
     selectedPiece = null;
-    selectedElephantIndex = null;
+    selectedBoardPiece = null;
     gameMessage.textContent = '';
     setSaveStatus('Nouvelle partie sauvegardée.');
     showGame();
@@ -303,12 +482,20 @@ restartButton.addEventListener('click', () => {
 });
 
 document.querySelector('#resume-button').addEventListener('click', showGame);
+finishGazelleMoveButton.addEventListener('click', finishGazelleMove);
 
 async function initialize() {
   try {
     const savedGame = await loadSavedGame();
     gameState = savedGame;
     if (gameState) {
+      if (gameState.gazelleMove !== null) {
+        const path = gameState.gazelleMove.path;
+        selectedBoardPiece = {
+          index: path[path.length - 1],
+          pieceId: 'gazelle'
+        };
+      }
       setSaveStatus('Partie précédente restaurée.');
       showGame();
     } else {

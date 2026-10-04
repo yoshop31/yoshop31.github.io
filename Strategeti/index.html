@@ -32,7 +32,8 @@
       <form id="new-game-form" class="setup-form">
         <label for="board-choice">Plateau</label>
         <select id="board-choice" name="board">
-          <option value="savanna-4x4">Savane · 4 × 4</option>
+          <option value="savanna-classic">Savane — classique</option>
+          <option value="savanna-advanced">Savane — avancé</option>
         </select>
         <button class="button button-primary" type="submit">Démarrer la partie</button>
       </form>
@@ -42,8 +43,8 @@
     <section id="game-panel" class="game-panel" aria-label="Partie" hidden>
       <div class="game-heading">
         <div>
-          <p class="eyebrow">Savane · 4 × 4</p>
-          <h1>La savane</h1>
+          <p class="eyebrow" id="board-name">Savane — classique</p>
+          <h1 id="board-heading">La savane</h1>
         </div>
         <div class="turn-indicator" id="turn-indicator" role="status" aria-live="polite"></div>
       </div>
@@ -60,6 +61,13 @@
       <div class="board-area">
         <div class="board-wrap">
           <div class="board" id="game-board" role="grid" aria-label="Plateau de jeu 4 par 4"></div>
+          <div class="game-result" id="game-result" role="status" aria-live="assertive" hidden>
+            <div class="game-result-card">
+              <p class="eyebrow">Partie terminée</p>
+              <h2 id="game-result-winner"></h2>
+              <p id="game-result-reason"></p>
+            </div>
+          </div>
         </div>
         <aside class="captured-stock" id="captured-stock" aria-labelledby="captured-title">
           <h2 id="captured-title">Mangées</h2>
@@ -76,6 +84,7 @@
           </div>
         </aside>
       </div>
+      <p class="placement-rule-hint" id="placement-rule-hint"></p>
 
       <section class="player-zone player-white" aria-labelledby="white-title">
         <div class="player-heading">
@@ -85,6 +94,10 @@
         </div>
         <div class="stock" id="white-stock" aria-label="Stock des pièces blanches"></div>
       </section>
+      <div class="gazelle-move-controls" id="gazelle-move-controls" hidden>
+        <p id="gazelle-move-progress" aria-live="polite"></p>
+        <button class="button button-primary" id="finish-gazelle-move" type="button">Terminer le déplacement</button>
+      </div>
       <p class="game-message" id="game-message" aria-live="polite"></p>
     </section>
 

@@ -4,19 +4,23 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 
 ## Règles disponibles
 
-- Plateau Savane de 4 × 4 cases, vide au début de la partie.
+- Deux plateaux Savane de 4 × 4 cases, vides au début de la partie : classique (pose interdite dans les quatre coins) et avancé (pose interdite dans les quatre cases centrales). Les pièces peuvent se déplacer sur toutes les cases.
 - Noir joue en haut ; Blanc joue en bas et commence.
 - Chaque joueur dispose de deux éléphants, deux lions, deux zèbres et deux gazelles.
-- À son tour, un joueur pose une pièce de son stock sur une case vide ou déplace un de ses éléphants d’une case horizontalement ou verticalement.
+- À son tour, un joueur pose une pièce de son stock sur une case vide ou déplace un de ses éléphants ou lions d’une case horizontalement ou verticalement.
 - L’éléphant pousse toute la chaîne d’animaux devant lui ; il ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est mangé.
+- Le lion peut se déplacer sur une case vide ou manger un zèbre ou une gazelle, de n’importe quelle couleur.
+- Le zèbre se déplace en ligne droite, horizontalement, verticalement ou en diagonale, d’autant de cases qu’il le souhaite vers une case vide. Les autres pièces bloquent son passage.
+- La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer ou terminer le déplacement.
+- Quatre pièces de même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.
+- La fin de partie affiche le vainqueur et la raison de la victoire au centre du plateau.
 - Les pièces mangées sont suivies à droite du plateau et ne retournent pas au stock jouable.
 - Un joueur perd si cinq de ses pièces ont été mangées ou s’il n’a aucun coup légal à son tour.
-- Les lions, zèbres et gazelles peuvent être posés, mais leurs règles de déplacement ne sont pas encore définies.
 
 ## Architecture
 
-- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove` et `moveElephant` retournent un nouvel état sans modifier l’état précédent.
-- `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes et coordonne règles et sauvegarde.
+- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour après les sauts de gazelle.
+- `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.
 - `js/app.js` affiche l’état du jeu, collecte les interactions et appelle cette API.
 - `js/storage.js` gère le stockage IndexedDB, sans logique d’affichage.
 - `pwa-sw.js` met en cache les ressources de l’application pour le démarrage hors ligne ; il ne stocke pas la progression.
