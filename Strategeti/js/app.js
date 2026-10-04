@@ -49,24 +49,31 @@ function describeStock(player) {
   container.replaceChildren();
   for (const piece of PIECES) {
     const count = stock[piece.id];
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'piece-choice';
-    button.disabled = isSaving ||
-      gameState.status !== 'playing' ||
-      gameState.currentPlayer !== player ||
-      count === 0;
-    button.setAttribute('aria-pressed', String(selectedPiece === piece.id && gameState.currentPlayer === player));
-    button.setAttribute('aria-label', `${piece.name}, ${count} disponible${count === 1 ? '' : 's'}`);
-    button.innerHTML = `<span class="piece-icon" aria-hidden="true">${piece.icon}</span><span class="piece-name">${piece.name}</span><span class="piece-count">× ${count}</span>`;
-    button.addEventListener('click', () => {
-      selectedPiece = selectedPiece === piece.id ? null : piece.id;
-      gameMessage.textContent = selectedPiece
-        ? `${piece.name} sélectionné. Choisissez une case vide.`
-        : 'Sélection annulée.';
-      renderGame();
-    });
-    container.append(button);
+    for (let instanceIndex = 0; instanceIndex < count; instanceIndex += 1) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'piece-choice';
+      button.disabled = isSaving ||
+        gameState.status !== 'playing' ||
+        gameState.currentPlayer !== player;
+      button.setAttribute('aria-pressed', String(
+        selectedPiece?.pieceId === piece.id &&
+        selectedPiece.instanceIndex === instanceIndex &&
+        gameState.currentPlayer === player
+      ));
+      button.setAttribute('aria-label', `${piece.name} ${instanceIndex + 1} sur ${count}`);
+      button.innerHTML = `<span class="piece-icon" aria-hidden="true">${piece.icon}</span>`;
+      button.addEventListener('click', () => {
+        const isSelected = selectedPiece?.pieceId === piece.id &&
+          selectedPiece.instanceIndex === instanceIndex;
+        selectedPiece = isSelected ? null : { pieceId: piece.id, instanceIndex };
+        gameMessage.textContent = selectedPiece
+          ? `${piece.name} sélectionné. Choisissez une case vide.`
+          : 'Sélection annulée.';
+        renderGame();
+      });
+      container.append(button);
+    }
   }
 }
 
@@ -125,7 +132,7 @@ async function placePiece(cellIndex) {
     isSaving = true;
     setSaveStatus('Enregistrement…');
     renderGame();
-    const nextState = await playGameMove(gameState, { cellIndex, pieceId: selectedPiece });
+    const nextState = await playGameMove(gameState, { cellIndex, pieceId: selectedPiece.pieceId });
     gameState = nextState;
     selectedPiece = null;
     gameMessage.textContent = '';
