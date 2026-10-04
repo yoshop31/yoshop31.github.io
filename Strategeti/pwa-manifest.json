@@ -1,0 +1,29 @@
+{
+    "name": "Anaglyphe",
+    "short_name": "Anaglyphe",
+    "description": "Anaglyphe Simple PWA",
+    "icons": [
+        {
+            "src": "img/fav_icon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "img/fav_icon.png",
+            "sizes": "1000x1600",
+            "type": "image/jpeg"
+        }
+    ],
+    "background_color": "#af0a1a",
+    "theme_color": "#af0a1a",
+    "display": "fullscreen",
+    "orientation": "any",
+    "start_url": ".",
+    "url": "index.html",
+    "scope": ".",
+    "lang": "fa-IR",
+    "dir": "rtl"
+}
