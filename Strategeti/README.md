@@ -1,29 +1,25 @@
-<div align="left">
-  <h1 align="left">Simple Progressive Web App (PWA)</h1>
-</div>
+# Strategeti
 
-<p>This is a simple page for a Progressive Web App (PWA)</p>
-<p align="center">
-  <a href="" rel="noopener">
- <img src="img/screenshot-3.jpg" alt="Project logo"></a>
-</p>
+Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA et jouable hors ligne après son premier chargement.
 
----
+## Règles disponibles
 
-## About
+- Plateau Savane de 4 × 4 cases, vide au début de la partie.
+- Noir joue en haut ; Blanc joue en bas et commence.
+- Chaque joueur dispose de deux éléphants, deux lions, deux zèbres et deux gazelles.
+- À son tour, un joueur choisit une pièce de son stock et la place sur une case vide.
+- La partie se termine lorsque les 16 cases sont occupées. Aucune condition de victoire n’est définie pour le moment.
 
-Displays a simple PWA demo. Implemented here using the program manifest, service workers, and storage. In this version, it is possible to define the first page, the default offline page, and the pages that should not be cached.
+## Architecture
 
-## Demo
-[https://yoshop31.github.io/](https://yoshop31.github.io/)
-<br>
-[https://alirahimi818.github.io/simple-PWA/](https://alirahimi818.github.io/simple-PWA/)
+- `js/game.js` contient les règles et le modèle de partie. `createGame` initialise une partie et `playMove` valide un coup et retourne un nouvel état sans modifier l’état précédent.
+- `js/game-api.js` expose les actions du jeu à l’interface et coordonne règles et sauvegarde.
+- `js/app.js` affiche l’état du jeu, collecte les interactions et appelle cette API.
+- `js/storage.js` gère le stockage IndexedDB, sans logique d’affichage.
+- `pwa-sw.js` met en cache les ressources de l’application pour le démarrage hors ligne ; il ne stocke pas la progression.
 
+L’état est sauvegardé après chaque coup et lors de la création ou de la remise à zéro d’une partie. Au rechargement, l’application restaure la dernière partie sauvegardée. Effacer les données du navigateur ou changer d’appareil efface/perd cette sauvegarde.
 
-## َUsage
+## Lancer en local
 
-You can see how to use this package on the Red Cherry site in Persian
-[https://redcherry.ir/?p=603](https://redcherry.ir/%d8%a2%d9%85%d9%88%d8%b2%d8%b4-%d9%be%db%8c%d8%a7%d8%af%d9%87-%d8%b3%d8%a7%d8%b2%db%8c-%d9%88%d8%a8-%d8%a7%d9%be%d9%84%db%8c%da%a9%db%8c%d8%b4%d9%86-%d9%be%db%8c%d8%b4-%d8%b1%d9%88%d9%86%d8%af%d9%87-p/)
-
-
-
+Servir le dossier `Strategeti` avec un serveur HTTP local, puis ouvrir `index.html` via cette adresse. Les modules JavaScript, IndexedDB et le Service Worker nécessitent un contexte sécurisé : `localhost` convient pour le développement. Après le premier chargement réussi, les ressources de l’application sont disponibles hors ligne.
