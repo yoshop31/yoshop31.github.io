@@ -101,6 +101,8 @@
     const home = document.getElementById('home');
     const cameraPage = document.getElementById('cameraPage');
     const camera = document.getElementById('camera');
+    const captureBtn = document.getElementById('captureBtn');
+    const gridBtn = document.getElementById('gridBtn');
     const gridCanvas = document.getElementById('gridCanvas');
     const photoLeft = document.getElementById('photoLeft');
     const photoRight = document.getElementById('photoRight');
@@ -146,10 +148,14 @@
     async function openCamera() {
       home.classList.add('hidden');
       cameraPage.classList.remove('hidden');
-      await loadCameras();
-      startCamera(cameras[currentCam]?.deviceId);
       step = 1;
       stepTitle.textContent = "Photo gauche";
+      try {
+        await loadCameras();
+        await startCamera(cameras[currentCam]?.deviceId);
+      } catch (err) {
+        alert("Erreur accès caméra : " + err);
+      }
     }
 
     function backHome() {
@@ -184,31 +190,30 @@
       if (stream) stopCamera();
       try {
         camera.classList.add('fade-out');
-        setTimeout(async () => {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: deviceId } }
-          });
-          camera.srcObject = stream;
-          camera.classList.remove('fade-out');
-          camera.classList.add('fade-in');
-          camera.classList.remove('hidden');
-          anaglyphCanvas.classList.add('hidden');
-          /*slider.classList.add('hidden');
-          offsetLabel.classList.add('hidden');
-          offsetYLabel.classList.add('hidden');
-          offsetYSlider.classList.add('hidden');
-          rotationLabel.classList.add('hidden');
-          rotationSlider.classList.add('hidden');
-          resetBtn.classList.add('hidden');*/
-          offsetPanel.classList.add('hidden');
-          /*invertBtn.classList.add('hidden');
-          downloadBtn.classList.add('hidden');*/
-          captureBtn.classList.remove('hidden');
-          gridBtn.classList.remove('hidden');
-          gridCanvas.classList.add('hidden');
-          showGrid = false;
-        }, 300);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const constraints = deviceId
+          ? { video: { deviceId: { exact: deviceId } } }
+          : { video: true };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        camera.srcObject = stream;
+        camera.classList.remove('hidden');
+        await camera.play();
+        camera.classList.remove('fade-out');
+        camera.classList.add('fade-in');
+        anaglyphCanvas.classList.add('hidden');
+        offsetPanel.classList.add('hidden');
+        captureBtn.classList.remove('hidden');
+        gridBtn.classList.remove('hidden');
+        gridCanvas.classList.add('hidden');
+        showGrid = false;
       } catch (err) {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        camera.srcObject = null;
+        camera.classList.remove('fade-out');
+        camera.classList.add('fade-in');
         alert("Erreur accès caméra : " + err);
       }
     }
@@ -216,7 +221,9 @@
     function stopCamera() {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        stream = null;
       }
+      camera.srcObject = null;
     }
 
     function takePhoto() {
