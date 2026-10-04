@@ -11,7 +11,7 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - L’éléphant pousse toute la chaîne d’animaux devant lui ; il ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est mangé.
 - Le lion peut se déplacer sur une case vide ou manger un zèbre ou une gazelle, de n’importe quelle couleur.
 - Le zèbre se déplace en ligne droite, horizontalement, verticalement ou en diagonale, d’autant de cases qu’il le souhaite vers une case vide. Les autres pièces bloquent son passage.
-- La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer ou terminer le déplacement.
+- La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer, terminer ou annuler tout le déplacement et revenir à la case initiale.
 - Quatre pièces de même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.
 - La fin de partie affiche le vainqueur et la raison de la victoire au centre du plateau.
 - Les pièces mangées sont suivies à droite du plateau et ne retournent pas au stock jouable.
@@ -19,7 +19,7 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 
 ## Architecture
 
-- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour après les sauts de gazelle.
+- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale.
 - `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.
 - `js/app.js` affiche l’état du jeu, collecte les interactions et appelle cette API.
 - `js/storage.js` gère le stockage IndexedDB, sans logique d’affichage.

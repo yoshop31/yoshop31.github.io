@@ -515,6 +515,29 @@ export function finishGazelleMove(state) {
   return advanceTurn(state, { gazelleMove: null }, state.currentPlayer);
 }
 
+export function cancelGazelleMove(state) {
+  if (!isGameState(state) || state.status !== 'playing' || state.gazelleMove === null) {
+    throw new Error('Aucun déplacement de gazelle n’est à annuler.');
+  }
+
+  const path = state.gazelleMove.path;
+  const startIndex = path[0];
+  const currentIndex = path[path.length - 1];
+  const gazelle = state.board[currentIndex];
+  if (state.board[startIndex] !== null && startIndex !== currentIndex) {
+    throw new Error('Impossible de restaurer la position initiale de la gazelle.');
+  }
+
+  const board = state.board.slice();
+  board[currentIndex] = null;
+  board[startIndex] = gazelle;
+  return {
+    ...state,
+    board,
+    gazelleMove: null
+  };
+}
+
 export function hasLegalAction(state, player = state.currentPlayer) {
   if (state.status !== 'playing') return false;
   if (state.gazelleMove !== null) return player === state.currentPlayer;

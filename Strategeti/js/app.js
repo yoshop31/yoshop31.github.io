@@ -8,6 +8,7 @@ import {
   PLAYERS
 } from './game.js';
 import {
+  cancelGameGazelleMove,
   finishGameGazelleMove,
   getGazelleMoves,
   loadSavedGame,
@@ -42,6 +43,7 @@ const capturedStock = document.querySelector('#captured-stock');
 const gazelleMoveControls = document.querySelector('#gazelle-move-controls');
 const gazelleMoveProgress = document.querySelector('#gazelle-move-progress');
 const finishGazelleMoveButton = document.querySelector('#finish-gazelle-move');
+const cancelGazelleMoveButton = document.querySelector('#cancel-gazelle-move');
 
 let gameState = null;
 let selectedPiece = null;
@@ -180,7 +182,7 @@ function renderBoard() {
       button.setAttribute('aria-label',
         `Ligne ${row}, colonne ${column} : case vide${placementAllowed ? '' : ', pose interdite'}`);
       button.classList.toggle('placement-forbidden', !placementAllowed);
-      button.innerHTML = `<span class="empty-marker" aria-hidden="true"></span>${placementAllowed ? '' : '<span class="forbidden-marker" aria-hidden="true">×</span>'}`;
+      button.innerHTML = '<span class="empty-marker" aria-hidden="true"></span>';
     }
     button.addEventListener('click', () => handleBoardClick(index));
     boardElement.append(button);
@@ -229,6 +231,7 @@ function renderGazelleMoveControls() {
   gazelleMoveProgress.textContent =
     `${jumpCount} saut${jumpCount === 1 ? '' : 's'} effectué${jumpCount === 1 ? '' : 's'} · Trajet : ${route}`;
   finishGazelleMoveButton.disabled = isSaving;
+  cancelGazelleMoveButton.disabled = isSaving;
 }
 
 function renderCapturedStock() {
@@ -257,8 +260,8 @@ function renderGame() {
   boardNameElement.textContent = currentBoardName;
   boardHeading.textContent = currentBoardName;
   placementRuleHint.textContent = gameState.boardId === ADVANCED_BOARD_ID
-    ? 'Les quatre cases centrales sont interdites à la pose (×) ; les déplacements sur ces cases restent autorisés.'
-    : 'Les quatre coins sont interdits à la pose (×) ; les déplacements sur ces cases restent autorisés.';
+    ? 'Les quatre cases centrales sont interdites à la pose ; les déplacements sur ces cases restent autorisés.'
+    : 'Les quatre coins sont interdits à la pose ; les déplacements sur ces cases restent autorisés.';
   renderBoard();
   renderGazelleMoveControls();
   describeStock('black');
@@ -428,6 +431,25 @@ async function finishGazelleMove() {
   }
 }
 
+async function cancelGazelleMove() {
+  if (isSaving || gameState.gazelleMove === null) return;
+  try {
+    isSaving = true;
+    setSaveStatus('Enregistrement…');
+    renderGame();
+    gameState = await cancelGameGazelleMove(gameState);
+    selectedBoardPiece = null;
+    gameMessage.textContent = 'Déplacement de la gazelle annulé. Vous pouvez choisir une autre action.';
+    setSaveStatus('Partie sauvegardée sur cet appareil.');
+  } catch (error) {
+    gameMessage.textContent = error.message;
+    setSaveStatus(error.message, true);
+  } finally {
+    isSaving = false;
+    renderGame();
+  }
+}
+
 async function beginGame(action) {
   if (isSaving) return;
   isSaving = true;
@@ -483,6 +505,7 @@ restartButton.addEventListener('click', () => {
 
 document.querySelector('#resume-button').addEventListener('click', showGame);
 finishGazelleMoveButton.addEventListener('click', finishGazelleMove);
+cancelGazelleMoveButton.addEventListener('click', cancelGazelleMove);
 
 async function initialize() {
   try {

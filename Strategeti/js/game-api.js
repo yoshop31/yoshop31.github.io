@@ -1,4 +1,5 @@
 import {
+  cancelGazelleMove,
   createGame,
   finishGazelleMove,
   getGazelleJumpDestinations,
@@ -65,6 +66,12 @@ export async function moveGameGazelle(state, action) {
 
 export async function finishGameGazelleMove(state) {
   const nextState = finishGazelleMove(state);
+  await saveGame(nextState);
+  return nextState;
+}
+
+export async function cancelGameGazelleMove(state) {
+  const nextState = cancelGazelleMove(state);
   await saveGame(nextState);
   return nextState;
 }
