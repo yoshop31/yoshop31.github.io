@@ -8,7 +8,7 @@
   <title>Strategeti — jeu à deux</title>
   <link rel="icon" type="image/png" href="img/fav_icon.png">
   <link rel="manifest" href="pwa-manifest.json">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261005-rules-menu">
   <script src="js/main.js" defer></script>
   <script type="module" src="js/app.js"></script>
 </head>
@@ -20,6 +20,7 @@
         <span>Strategeti</span>
       </a>
       <nav class="menu" aria-label="Menu de partie">
+        <button class="button button-quiet" id="rules-button" type="button">Règles</button>
         <button class="button button-quiet" id="new-game-button" type="button">Nouvelle partie</button>
         <button class="button button-quiet" id="restart-button" type="button" hidden>Recommencer</button>
       </nav>
@@ -38,6 +39,45 @@
         <button class="button button-primary" type="submit">Démarrer la partie</button>
       </form>
       <button class="button button-quiet resume-button" id="resume-button" type="button" hidden>Revenir à la partie</button>
+    </section>
+
+    <section class="rules-panel panel" id="rules-panel" aria-labelledby="rules-title" hidden>
+      <p class="eyebrow">Strategeti · règles du jeu</p>
+      <h1 id="rules-title" tabindex="-1">Comment jouer ?</h1>
+      <section class="rules-section" aria-labelledby="rules-goal-title">
+        <h2 id="rules-goal-title">But et préparation</h2>
+        <ul>
+          <li>La partie se joue à deux sur un plateau de 4 × 4 cases. Blanc commence ; Noir joue en haut et Blanc en bas.</li>
+          <li>Chaque joueur dispose de deux éléphants, deux lions, deux zèbres et deux gazelles.</li>
+          <li>Sur le plateau classique, la pose est interdite dans les quatre coins. Sur le plateau avancé, elle est interdite dans les quatre cases centrales. Les déplacements restent autorisés sur toutes les cases.</li>
+        </ul>
+      </section>
+      <section class="rules-section" aria-labelledby="rules-turn-title">
+        <h2 id="rules-turn-title">À votre tour</h2>
+        <p>Posez un animal de votre réserve sur une case vide autorisée ou déplacez un animal de votre couleur en respectant son déplacement. Les animaux mangés ou poussés hors du plateau sont perdus et ne retournent pas en réserve.</p>
+      </section>
+      <section class="rules-section" aria-labelledby="rules-animals-title">
+        <h2 id="rules-animals-title">Déplacement des animaux</h2>
+        <ul class="animal-rules">
+          <li><strong>Éléphant :</strong> avance d’une case horizontalement ou verticalement et doit pousser au moins un animal adjacent. Il pousse toute la chaîne devant lui, quelque soit la couleur, mais ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est perdu.</li>
+          <li><strong>Lion :</strong> avance d’une case horizontalement ou verticalement en mangeant un zèbre ou une gazelle adjacente. Il peut manger une pièce de sa propre couleur.</li>
+          <li><strong>Zèbre :</strong> se déplace en ligne droite, horizontalement, verticalement ou en diagonale, d’autant de cases qu’il le souhaite vers une case vide. Les autres pièces bloquent son passage.</li>
+          <li><strong>Gazelle :</strong> saute horizontalement, verticalement ou en diagonale par-dessus une ou plusieurs pièces consécutives et atterrit sur la première case vide après elles. Elle peut enchaîner des sauts en changeant de direction ; après chaque saut, vous pouvez continuer, terminer le déplacement ou annuler tout le trajet.</li>
+        </ul>
+      </section>
+      <section class="rules-section" aria-labelledby="rules-end-title">
+        <h2 id="rules-end-title">Fin de partie</h2>
+        <p>Vous gagnez si au moins une condition suivante est remplie :
+          <ul>
+          <li>Vous alignez quatre animaux de votre couleur horizontalement, verticalement ou en diagonale.</li>
+          <li>Vous mangez ou poussez hors du plateau cinq animaux de votre adversaire.</li>
+          <li>Vous bloquez votre adversaire qui ne peux plus rien jouer.</li>
+          </ul>
+        </p>
+      </section>
+      <div class="rules-actions">
+        <button class="button button-primary" id="return-from-rules-button" type="button">Retour à l’accueil</button>
+      </div>
     </section>
 
     <section id="game-panel" class="game-panel" aria-label="Partie" hidden>

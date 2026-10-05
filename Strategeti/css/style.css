@@ -162,10 +162,53 @@ h2 {
 }
 
 .setup-panel h1,
-.game-heading h1 {
+.game-heading h1,
+.rules-panel h1 {
   margin-bottom: 10px;
   font-size: clamp(1.7rem, 5vw, 2.2rem);
   letter-spacing: -0.04em;
+}
+
+.rules-panel {
+  width: min(100%, 690px);
+  margin: 25px auto 0;
+  padding: clamp(22px, 5vw, 36px);
+}
+
+.rules-panel h1 {
+  margin-bottom: 24px;
+}
+
+.rules-section {
+  margin-top: 23px;
+}
+
+.rules-section h2 {
+  margin-bottom: 9px;
+  font-size: 1.2rem;
+}
+
+.rules-section p,
+.rules-section li {
+  color: #435149;
+  line-height: 1.65;
+}
+
+.rules-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.rules-section .animal-rules {
+  gap: 12px;
+}
+
+.rules-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
 }
 
 .muted {
@@ -713,6 +756,19 @@ h2 {
 
   .piece-icon {
     font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .topbar {
+    flex-wrap: wrap;
+    padding: 8px 0;
+  }
+
+  .menu {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 

@@ -21,7 +21,7 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 
 - `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale.
 - `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.
-- `js/app.js` affiche l’état du jeu, collecte les interactions et appelle cette API.
+- `js/app.js` affiche l’état du jeu et les règles, collecte les interactions et appelle cette API.
 - `js/storage.js` gère le stockage IndexedDB, sans logique d’affichage.
 - `pwa-sw.js` met en cache les ressources de l’application pour le démarrage hors ligne ; il ne stocke pas la progression.
 

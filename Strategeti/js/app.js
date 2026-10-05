@@ -21,7 +21,11 @@ import {
 } from './game-api.js';
 
 const setupPanel = document.querySelector('#setup-panel');
+const rulesPanel = document.querySelector('#rules-panel');
 const gamePanel = document.querySelector('#game-panel');
+const rulesButton = document.querySelector('#rules-button');
+const rulesTitle = document.querySelector('#rules-title');
+const returnFromRulesButton = document.querySelector('#return-from-rules-button');
 const boardElement = document.querySelector('#game-board');
 const boardNameElement = document.querySelector('#board-name');
 const boardHeading = document.querySelector('#board-heading');
@@ -50,19 +54,40 @@ let selectedPiece = null;
 let selectedBoardPiece = null;
 let pendingOperation = null;
 let isSaving = false;
+let rulesReturnTarget = setupPanel;
 
 function showSetup() {
   setupPanel.hidden = false;
+  rulesPanel.hidden = true;
   gamePanel.hidden = true;
+  rulesButton.hidden = false;
+  document.querySelector('#new-game-button').hidden = false;
   restartButton.hidden = true;
   document.querySelector('#resume-button').hidden = !gameState;
 }
 
 function showGame() {
   setupPanel.hidden = true;
+  rulesPanel.hidden = true;
   gamePanel.hidden = false;
+  rulesButton.hidden = false;
+  document.querySelector('#new-game-button').hidden = false;
   restartButton.hidden = false;
   renderGame();
+}
+
+function showRules() {
+  rulesReturnTarget = gameState ? gamePanel : setupPanel;
+  document.querySelector('#new-game-button').hidden = true;
+  restartButton.hidden = true;
+  rulesButton.hidden = true;
+  setupPanel.hidden = true;
+  gamePanel.hidden = true;
+  rulesPanel.hidden = false;
+  returnFromRulesButton.textContent = rulesReturnTarget === gamePanel
+    ? 'Retour à la partie en cours'
+    : 'Retour à l’accueil';
+  rulesTitle.focus();
 }
 
 function setSaveStatus(message, isError = false) {
@@ -505,6 +530,14 @@ confirmDialog.addEventListener('close', async () => {
 });
 
 newGameButton.addEventListener('click', showSetup);
+rulesButton.addEventListener('click', showRules);
+returnFromRulesButton.addEventListener('click', () => {
+  if (rulesReturnTarget === gamePanel) {
+    showGame();
+  } else {
+    showSetup();
+  }
+});
 
 newGameForm.addEventListener('submit', event => {
   event.preventDefault();
