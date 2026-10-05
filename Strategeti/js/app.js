@@ -171,6 +171,9 @@ function renderBoard() {
     const column = (index % BOARD_SIZE) + 1;
     const canMoveToCell = selectedBoardPiece !== null &&
       (index === selectedBoardPiece.index ||
+          (selectedBoardPiece.pieceId === 'gazelle' &&
+           gameState.gazelleMove !== null &&
+           index === gameState.gazelleMove.path[0]) ||
         (selectedBoardPiece.pieceId === 'elephant'
           ? isElephantMoveAvailable(selectedBoardPiece.index, index)
           : selectedBoardPiece.pieceId === 'lion'
@@ -195,7 +198,16 @@ function renderBoard() {
 
     if (cell) {
       const piece = PIECES.find(item => item.id === cell.pieceId);
-      button.setAttribute('aria-label', `Ligne ${row}, colonne ${column} : ${piece.name}, ${PLAYERS[cell.player].name}`);
+      let cellLabel = `Ligne ${row}, colonne ${column} : ${piece.name}, ${PLAYERS[cell.player].name}`;
+      if (selectedBoardPiece?.pieceId === 'gazelle' && gameState.gazelleMove !== null) {
+        const path = gameState.gazelleMove.path;
+        if (index === path[0]) {
+          cellLabel += ', cliquer pour annuler le déplacement';
+        } else if (index === path[path.length - 1]) {
+          cellLabel += ', cliquer pour terminer le déplacement';
+        }
+      }
+      button.setAttribute('aria-label', cellLabel);
       if (cell.player === gameState.currentPlayer &&
           (cell.pieceId === 'elephant' || cell.pieceId === 'lion' ||
            cell.pieceId === 'zebra' || cell.pieceId === 'gazelle')) {
@@ -204,8 +216,12 @@ function renderBoard() {
       button.innerHTML = `<span class="board-piece" aria-hidden="true">${piece.icon}</span><span class="board-owner">${PLAYERS[cell.player].name}</span>`;
     } else {
       const placementAllowed = isPlacementAllowed(gameState.boardId, index);
-      button.setAttribute('aria-label',
-        `Ligne ${row}, colonne ${column} : case vide${placementAllowed ? '' : ', pose interdite'}`);
+      const gazelleStart = selectedBoardPiece?.pieceId === 'gazelle' &&
+        gameState.gazelleMove !== null &&
+        index === gameState.gazelleMove.path[0];
+      button.setAttribute('aria-label', gazelleStart
+        ? `Ligne ${row}, colonne ${column} : case de départ, cliquer pour annuler le déplacement`
+        : `Ligne ${row}, colonne ${column} : case vide${placementAllowed ? '' : ', pose interdite'}`);
       button.classList.toggle('placement-forbidden', !placementAllowed);
       button.innerHTML = '<span class="empty-marker" aria-hidden="true"></span>';
     }
@@ -350,16 +366,30 @@ function renderGame() {
     const currentIndex = gameState.gazelleMove.path[gameState.gazelleMove.path.length - 1];
     const nextJumps = getGazelleMoves(gameState, currentIndex);
     gameMessage.textContent = nextJumps.length > 0
-      ? 'Choisissez un nouvel atterrissage pour enchaîner un saut, ou terminez le déplacement.'
-      : 'Aucun autre saut possible : terminez le déplacement.';
+      ? 'Choisissez une destination pour continuer, cliquez sur la gazelle pour terminer ou sur sa case de départ pour annuler.'
+      : 'Aucun autre saut possible : cliquez sur la gazelle pour terminer ou sur sa case de départ pour annuler.';
   }
 }
 
 function handleBoardClick(index) {
   const cell = gameState.board[index];
+  if (gameState.gazelleMove !== null) {
+    const path = gameState.gazelleMove.path;
+    const startIndex = path[0];
+    const currentIndex = path[path.length - 1];
+    if (index === startIndex) {
+      cancelGazelleMove();
+    } else if (index === currentIndex) {
+      finishGazelleMove();
+    } else if (selectedBoardPiece?.pieceId === 'gazelle' &&
+        getGazelleMoves(gameState, currentIndex).includes(index)) {
+      moveSelectedPieceTo(index);
+    }
+    return;
+  }
+
   if (selectedBoardPiece !== null) {
     if (index === selectedBoardPiece.index) {
-      if (gameState.gazelleMove !== null) return;
       selectedBoardPiece = null;
       gameMessage.textContent = 'Déplacement annulé.';
       renderGame();
@@ -433,10 +463,7 @@ async function moveSelectedPieceTo(toIndex) {
     gameState = nextState;
     if (isGazelleJump) {
       selectedBoardPiece = { index: toIndex, pieceId };
-      const nextJumps = getGazelleMoves(gameState, toIndex);
-      gameMessage.textContent = nextJumps.length > 0
-        ? 'Saut effectué. Choisissez le prochain saut ou terminez le déplacement.'
-        : 'Saut effectué. Aucun autre saut possible : terminez le déplacement.';
+      gameMessage.textContent = 'Saut effectué.';
     } else {
       selectedPiece = null;
       selectedBoardPiece = null;

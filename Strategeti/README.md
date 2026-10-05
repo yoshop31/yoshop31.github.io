@@ -11,7 +11,7 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - L’éléphant ne peut se déplacer qu’en poussant au moins un animal adjacent ; il pousse toute la chaîne devant lui et ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est mangé.
 - Le lion ne peut se déplacer qu’en mangeant un zèbre ou une gazelle adjacente, de n’importe quelle couleur.
 - Le zèbre se déplace en ligne droite, horizontalement, verticalement ou en diagonale, d’autant de cases qu’il le souhaite vers une case vide. Les autres pièces bloquent son passage.
-- La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer, terminer ou annuler tout le déplacement et revenir à la case initiale.
+- La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer, cliquer sur la gazelle pour terminer ou cliquer sur sa case de départ pour annuler tout le déplacement.
 - Quatre pièces de même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.
 - La fin de partie affiche le vainqueur et la raison de la victoire au centre du plateau.
 - Les pièces mangées sont suivies à droite du plateau et ne retournent pas au stock jouable.
