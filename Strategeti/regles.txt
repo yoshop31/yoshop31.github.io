@@ -1,0 +1,17 @@
+elephant
+	pas diago
+	+obligation de pousser
+
+lion
+	pas diago
+	+obligation de manger
+	peut manger sa couleur
+	1 case
+
+zebre
+	oui diago	
+
+
+gazelle
+	oui diago
+	sauter 2 animaux

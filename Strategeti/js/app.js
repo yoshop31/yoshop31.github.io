@@ -123,9 +123,9 @@ function selectBoardPiece(index) {
   selectedPiece = null;
   selectedBoardPiece = { index, pieceId: piece.pieceId };
   if (piece.pieceId === 'elephant') {
-    gameMessage.textContent = 'Choisissez une case adjacente. Les animaux devant l’éléphant seront poussés.';
+    gameMessage.textContent = 'Choisissez un animal adjacent à pousser. L’éléphant ne peut pas se déplacer sans pousser.';
   } else if (piece.pieceId === 'lion') {
-    gameMessage.textContent = 'Choisissez une case adjacente horizontalement ou verticalement. Le lion peut manger un zèbre ou une gazelle.';
+    gameMessage.textContent = 'Choisissez un zèbre ou une gazelle adjacent à manger. Le lion ne peut pas se déplacer sans manger.';
   } else if (piece.pieceId === 'gazelle') {
     gameMessage.textContent = 'Choisissez une case d’atterrissage après avoir sauté par-dessus une suite d’animaux.';
   } else {
@@ -147,7 +147,7 @@ function renderBoard() {
     const canMoveToCell = selectedBoardPiece !== null &&
       (index === selectedBoardPiece.index ||
         (selectedBoardPiece.pieceId === 'elephant'
-          ? isAdjacent(selectedBoardPiece.index, index)
+          ? isElephantMoveAvailable(selectedBoardPiece.index, index)
           : selectedBoardPiece.pieceId === 'lion'
             ? isLionMoveAvailable(selectedBoardPiece.index, index)
             : selectedBoardPiece.pieceId === 'gazelle'
@@ -214,9 +214,26 @@ function isZebraMoveAvailable(fromIndex, toIndex) {
 function isLionMoveAvailable(fromIndex, toIndex) {
   if (!isAdjacent(fromIndex, toIndex)) return false;
   const destination = gameState.board[toIndex];
-  return destination === null ||
-    destination.pieceId === 'gazelle' ||
-    destination.pieceId === 'zebra';
+  return destination !== null &&
+    (destination.pieceId === 'gazelle' ||
+      destination.pieceId === 'zebra');
+}
+
+function isElephantMoveAvailable(fromIndex, toIndex) {
+  if (!isAdjacent(fromIndex, toIndex) || !gameState.board[toIndex]) return false;
+
+  const rowStep = Math.floor(toIndex / BOARD_SIZE) - Math.floor(fromIndex / BOARD_SIZE);
+  const columnStep = (toIndex % BOARD_SIZE) - (fromIndex % BOARD_SIZE);
+  let row = Math.floor(toIndex / BOARD_SIZE);
+  let column = toIndex % BOARD_SIZE;
+  while (row >= 0 && row < BOARD_SIZE && column >= 0 && column < BOARD_SIZE) {
+    const piece = gameState.board[row * BOARD_SIZE + column];
+    if (!piece) return true;
+    if (piece.pieceId === 'elephant') return false;
+    row += rowStep;
+    column += columnStep;
+  }
+  return true;
 }
 
 function renderGazelleMoveControls() {
@@ -292,9 +309,9 @@ function renderGame() {
     if (!gameMessage.textContent) {
       gameMessage.textContent = selectedBoardPiece !== null
         ? selectedBoardPiece.pieceId === 'elephant'
-          ? 'Choisissez une case adjacente pour déplacer l’éléphant.'
+            ? 'Choisissez un animal adjacent à pousser pour déplacer l’éléphant.'
           : selectedBoardPiece.pieceId === 'lion'
-            ? 'Choisissez une case adjacente horizontalement ou verticalement pour déplacer le lion.'
+              ? 'Choisissez un zèbre ou une gazelle adjacent à manger pour déplacer le lion.'
             : selectedBoardPiece.pieceId === 'gazelle'
               ? 'Choisissez une case d’atterrissage après avoir sauté par-dessus une suite d’animaux.'
               : 'Choisissez une case vide sur la ligne droite ou diagonale du zèbre.'
@@ -322,7 +339,7 @@ function handleBoardClick(index) {
       gameMessage.textContent = 'Déplacement annulé.';
       renderGame();
     } else if (selectedBoardPiece.pieceId === 'elephant' &&
-        isAdjacent(selectedBoardPiece.index, index)) {
+        isElephantMoveAvailable(selectedBoardPiece.index, index)) {
       moveSelectedPieceTo(index);
     } else if (selectedBoardPiece.pieceId === 'lion' &&
         isLionMoveAvailable(selectedBoardPiece.index, index)) {

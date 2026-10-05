@@ -6,7 +6,7 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-pwa-2.9';
+var cache_storage_name = 'strategeti-pwa-3.1';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
@@ -28,7 +28,7 @@ self.addEventListener('install', function (e) {
 	e.waitUntil(caches.open(cache_storage_name).then(function (cache) {
 		console.log('PWA sw caching first urls');
 		return Promise.all(first_cache_urls.map(function (url) {
-			return cache.add(url);
+			return cache.add(new Request(url, { cache: 'reload' }));
 		}));
 	}).then(function () {
 		return self.skipWaiting();

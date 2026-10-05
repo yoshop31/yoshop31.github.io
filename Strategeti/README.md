@@ -7,9 +7,9 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - Deux plateaux Savane de 4 × 4 cases, vides au début de la partie : classique (pose interdite dans les quatre coins) et avancé (pose interdite dans les quatre cases centrales). Les pièces peuvent se déplacer sur toutes les cases.
 - Noir joue en haut ; Blanc joue en bas et commence.
 - Chaque joueur dispose de deux éléphants, deux lions, deux zèbres et deux gazelles.
-- À son tour, un joueur pose une pièce de son stock sur une case vide ou déplace un de ses éléphants ou lions d’une case horizontalement ou verticalement.
-- L’éléphant pousse toute la chaîne d’animaux devant lui ; il ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est mangé.
-- Le lion peut se déplacer sur une case vide ou manger un zèbre ou une gazelle, de n’importe quelle couleur.
+- À son tour, un joueur pose une pièce de son stock sur une case vide ou déplace une de ses pièces selon ses règles de déplacement.
+- L’éléphant ne peut se déplacer qu’en poussant au moins un animal adjacent ; il pousse toute la chaîne devant lui et ne peut pas pousser un autre éléphant. Un animal poussé hors du plateau est mangé.
+- Le lion ne peut se déplacer qu’en mangeant un zèbre ou une gazelle adjacente, de n’importe quelle couleur.
 - Le zèbre se déplace en ligne droite, horizontalement, verticalement ou en diagonale, d’autant de cases qu’il le souhaite vers une case vide. Les autres pièces bloquent son passage.
 - La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer, terminer ou annuler tout le déplacement et revenir à la case initiale.
 - Quatre pièces de même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.

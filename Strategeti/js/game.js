@@ -110,6 +110,8 @@ function canMoveElephant(state, fromIndex, toIndex, player) {
   const columnStep = toColumn - fromColumn;
   if (Math.abs(rowStep) + Math.abs(columnStep) !== 1) return false;
 
+  if (!state.board[toIndex]) return false;
+
   let row = toRow;
   let column = toColumn;
   while (isInsideBoard(row, column)) {
@@ -136,9 +138,9 @@ function canMoveLion(state, fromIndex, toIndex, player) {
   if (Math.abs(fromRow - toRow) + Math.abs(fromColumn - toColumn) !== 1) return false;
 
   const destination = state.board[toIndex];
-  return destination === null ||
-    destination.pieceId === 'gazelle' ||
-    destination.pieceId === 'zebra';
+  return destination !== null &&
+    (destination.pieceId === 'gazelle' ||
+      destination.pieceId === 'zebra');
 }
 
 function canJumpGazelle(state, fromIndex, toIndex, player) {
@@ -324,6 +326,9 @@ export function moveElephant(state, { fromIndex, toIndex }) {
         Math.abs((toIndex % BOARD_SIZE) - (fromIndex % BOARD_SIZE)) !== 1) {
       throw new Error('L’éléphant se déplace d’une case, horizontalement ou verticalement.');
     }
+    if (!state.board[toIndex]) {
+      throw new Error('L’éléphant doit pousser au moins un animal pour se déplacer.');
+    }
     const rowStep = Math.floor(toIndex / BOARD_SIZE) - Math.floor(fromIndex / BOARD_SIZE);
     const columnStep = (toIndex % BOARD_SIZE) - (fromIndex % BOARD_SIZE);
     let row = Math.floor(toIndex / BOARD_SIZE);
@@ -433,7 +438,7 @@ export function moveLion(state, { fromIndex, toIndex }) {
     throw new Error('Vous devez sélectionner un de vos lions.');
   }
   if (!canMoveLion(state, fromIndex, toIndex, player)) {
-    throw new Error('Le lion se déplace d’une case horizontalement ou verticalement et ne peut manger que les zèbres et les gazelles.');
+    throw new Error('Le lion doit manger un zèbre ou une gazelle adjacent pour se déplacer.');
   }
 
   const board = state.board.slice();
