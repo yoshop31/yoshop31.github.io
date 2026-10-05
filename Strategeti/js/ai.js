@@ -27,11 +27,11 @@ const LINES = [
   Array.from({ length: BOARD_SIZE }, (_, index) => (index + 1) * (BOARD_SIZE - 1))
 ];
 
-function opponentOf(player) {
+export function opponentOf(player) {
   return player === 'white' ? 'black' : 'white';
 }
 
-function applyAction(state, action) {
+export function applyAiAction(state, action) {
   if (action.type === 'place') {
     return playMove(state, {
       cellIndex: action.cellIndex,
@@ -57,7 +57,7 @@ function applyAction(state, action) {
   return finishGazelleMove(nextState);
 }
 
-function evaluate(state, player) {
+export function evaluateAiState(state, player) {
   if (state.status === 'finished') {
     return state.winner === player ? 100000 + state.moveCount : -100000 - state.moveCount;
   }
@@ -96,46 +96,52 @@ function evaluate(state, player) {
   return score;
 }
 
-export function chooseAiMove(state, player = state.aiPlayer) {
-  if (player !== 'white' && player !== 'black') {
-    throw new Error('Le joueur IA n’est pas défini.');
-  }
-  if (state.currentPlayer !== player || state.status !== 'playing') {
-    throw new Error('Ce n’est pas au tour de l’IA.');
-  }
+export class BeginnerAI {
+  chooseMove(state, player = state.aiPlayer) {
+    if (player !== 'white' && player !== 'black') {
+      throw new Error('Le joueur IA n’est pas défini.');
+    }
+    if (state.currentPlayer !== player || state.status !== 'playing') {
+      throw new Error('Ce n’est pas au tour de l’IA.');
+    }
 
-  const actions = getLegalActions(state, player);
-  if (actions.length === 0) {
-    throw new Error('L’IA n’a trouvé aucun coup légal alors que la partie est en cours.');
-  }
+    const actions = getLegalActions(state, player);
+    if (actions.length === 0) {
+      throw new Error('L’IA n’a trouvé aucun coup légal alors que la partie est en cours.');
+    }
 
-  const opponent = opponentOf(player);
-  let bestScore = -Infinity;
-  let bestActions = [];
-  for (const action of actions) {
-    const nextState = applyAction(state, action);
-    let score = evaluate(nextState, player);
-    if (nextState.status === 'playing') {
-      const replies = getLegalActions(nextState, opponent);
-      if (replies.length === 0) {
-        score = Math.max(score, 100000 + nextState.moveCount);
-      } else {
-        score = Infinity;
-        for (const reply of replies) {
-          const afterReply = applyAction(nextState, reply);
-          score = Math.min(score, evaluate(afterReply, player));
-          if (score < bestScore) break;
+    const opponent = opponentOf(player);
+    let bestScore = -Infinity;
+    let bestActions = [];
+    for (const action of actions) {
+      const nextState = applyAiAction(state, action);
+      let score = evaluateAiState(nextState, player);
+      if (nextState.status === 'playing') {
+        const replies = getLegalActions(nextState, opponent);
+        if (replies.length === 0) {
+          score = Math.max(score, 100000 + nextState.moveCount);
+        } else {
+          score = Infinity;
+          for (const reply of replies) {
+            const afterReply = applyAiAction(nextState, reply);
+            score = Math.min(score, evaluateAiState(afterReply, player));
+            if (score < bestScore) break;
+          }
         }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestActions = [action];
+      } else if (score === bestScore) {
+        bestActions.push(action);
       }
     }
 
-    if (score > bestScore) {
-      bestScore = score;
-      bestActions = [action];
-    } else if (score === bestScore) {
-      bestActions.push(action);
-    }
+    return bestActions[Math.floor(Math.random() * bestActions.length)];
   }
+}
 
-  return bestActions[Math.floor(Math.random() * bestActions.length)];
+export function chooseAiMove(state, player = state.aiPlayer) {
+  return new BeginnerAI().chooseMove(state, player);
 }

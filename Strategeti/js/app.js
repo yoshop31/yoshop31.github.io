@@ -7,7 +7,8 @@ import {
   PIECES,
   PLAYERS
 } from './game.js';
-import { chooseAiMove } from './ai.js';
+import { BeginnerAI } from './ai.js';
+import { StrongAI } from './ai-strong.js';
 import {
   cancelGameGazelleMove,
   finishGameGazelleMove,
@@ -59,6 +60,10 @@ let isSaving = false;
 let isAiThinking = false;
 let aiTurnKey = null;
 let rulesReturnTarget = setupPanel;
+const aiPlayers = {
+  beginner: new BeginnerAI(),
+  strong: new StrongAI()
+};
 
 function showSetup() {
   setupPanel.hidden = false;
@@ -329,9 +334,13 @@ function renderGame() {
     ? 'Les quatre cases centrales sont interdites à la pose ; les déplacements sur ces cases restent autorisés.'
     : 'Les quatre coins sont interdits à la pose ; les déplacements sur ces cases restent autorisés.';
   document.querySelector('#black-title .player-position').textContent =
-    gameState.aiPlayer === 'black' ? '— en haut · IA' : '— en haut';
+    gameState.aiPlayer === 'black'
+      ? `— en haut · IA ${gameState.aiLevel === 'strong' ? 'forte' : 'débutante'}`
+      : '— en haut';
   document.querySelector('#white-title .player-position').textContent =
-    gameState.aiPlayer === 'white' ? '— en bas · IA' : '— en bas';
+    gameState.aiPlayer === 'white'
+      ? `— en bas · IA ${gameState.aiLevel === 'strong' ? 'forte' : 'débutante'}`
+      : '— en bas';
   renderBoard();
   renderGazelleMoveControls();
   describeStock('black');
@@ -402,7 +411,7 @@ function scheduleAiTurn() {
 async function playAiTurn(expectedMoveCount) {
   isAiThinking = true;
   try {
-    const action = chooseAiMove(gameState);
+    const action = aiPlayers[gameState.aiLevel].chooseMove(gameState);
     selectedPiece = action.type === 'place'
       ? { pieceId: action.pieceId, instanceIndex: 0 }
       : null;
@@ -610,8 +619,9 @@ async function beginGame(action) {
   newGameForm.querySelector('button[type="submit"]').disabled = true;
   try {
     setSaveStatus('Enregistrement…');
-    const nextState = await startGame(action.boardId, action.aiPlayer);
+    const nextState = await startGame(action.boardId, action.aiPlayer, action.aiLevel);
     gameState = nextState;
+    aiTurnKey = null;
     selectedPiece = null;
     selectedBoardPiece = null;
     gameMessage.textContent = '';
@@ -656,7 +666,8 @@ newGameForm.addEventListener('submit', event => {
   const action = {
     type: 'new',
     boardId: document.querySelector('#board-choice').value,
-    aiPlayer: playerModeSelect.value === 'none' ? null : playerModeSelect.value
+    aiPlayer: playerModeSelect.value === 'none' ? null : playerModeSelect.value.split('-')[0],
+    aiLevel: playerModeSelect.value === 'none' ? null : playerModeSelect.value.split('-')[1]
   };
   if (gameState) {
     requestConfirmation(action);
@@ -670,7 +681,8 @@ restartButton.addEventListener('click', () => {
     requestConfirmation({
       type: 'restart',
       boardId: gameState.boardId,
-      aiPlayer: gameState.aiPlayer
+      aiPlayer: gameState.aiPlayer,
+      aiLevel: gameState.aiLevel
     });
   }
 });

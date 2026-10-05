@@ -24,8 +24,12 @@ export async function loadSavedGame() {
   return state;
 }
 
-export async function startGame(boardId, aiPlayer = null) {
-  const state = createGame(boardId, aiPlayer);
+export async function startGame(
+  boardId,
+  aiPlayer = null,
+  aiLevel = aiPlayer === null ? null : 'beginner'
+) {
+  const state = createGame(boardId, aiPlayer, aiLevel);
   await saveGame(state);
   return state;
 }
