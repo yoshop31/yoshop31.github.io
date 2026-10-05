@@ -238,17 +238,21 @@ function advanceTurn(state, changes, player) {
   return nextState;
 }
 
-export function createGame(boardId = BOARD_ID) {
+export function createGame(boardId = BOARD_ID, aiPlayer = null) {
   boardId = normalizeBoardId(boardId);
   if (!Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, boardId)) {
     throw new Error('Ce plateau n’est pas disponible.');
+  }
+  if (aiPlayer !== null && aiPlayer !== 'black' && aiPlayer !== 'white') {
+    throw new Error('Le joueur IA sélectionné n’est pas disponible.');
   }
 
   const stock = Object.fromEntries(PIECES.map(piece => [piece.id, 2]));
 
   return {
-    version: 5,
+    version: 6,
     boardId,
+    aiPlayer,
     board: Array(BOARD_SIZE * BOARD_SIZE).fill(null),
     stocks: {
       black: { ...stock },
@@ -586,6 +590,68 @@ export function hasLegalAction(state, player = state.currentPlayer) {
   return false;
 }
 
+export function getLegalActions(state, player = state.currentPlayer) {
+  if (!isGameState(state) || state.status !== 'playing' ||
+      state.gazelleMove !== null ||
+      (player !== 'white' && player !== 'black')) return [];
+
+  const actions = [];
+  const stock = state.stocks[player];
+  for (let cellIndex = 0; cellIndex < state.board.length; cellIndex += 1) {
+    if (state.board[cellIndex] !== null || !isPlacementAllowed(state.boardId, cellIndex)) continue;
+    for (const piece of PIECES) {
+      if (stock[piece.id] > 0) actions.push({ type: 'place', cellIndex, pieceId: piece.id });
+    }
+  }
+
+  for (let fromIndex = 0; fromIndex < state.board.length; fromIndex += 1) {
+    const piece = state.board[fromIndex];
+    if (!piece || piece.player !== player) continue;
+
+    if (piece.pieceId === 'elephant' || piece.pieceId === 'lion') {
+      const fromRow = Math.floor(fromIndex / BOARD_SIZE);
+      const fromColumn = fromIndex % BOARD_SIZE;
+      for (const direction of DIRECTIONS) {
+        const toRow = fromRow + direction.row;
+        const toColumn = fromColumn + direction.column;
+        if (!isInsideBoard(toRow, toColumn)) continue;
+        const toIndex = toRow * BOARD_SIZE + toColumn;
+        const canMove = piece.pieceId === 'elephant'
+          ? canMoveElephant(state, fromIndex, toIndex, player)
+          : canMoveLion(state, fromIndex, toIndex, player);
+        if (canMove) actions.push({ type: 'move', pieceId: piece.pieceId, fromIndex, toIndex });
+      }
+    } else if (piece.pieceId === 'zebra') {
+      for (let toIndex = 0; toIndex < state.board.length; toIndex += 1) {
+        if (canMoveZebra(state, fromIndex, toIndex, player)) {
+          actions.push({ type: 'move', pieceId: piece.pieceId, fromIndex, toIndex });
+        }
+      }
+    } else if (piece.pieceId === 'gazelle') {
+      const addGazelleRoutes = (currentState, currentIndex, path, visited) => {
+        for (const toIndex of getGazelleJumpDestinations(currentState, currentIndex)) {
+          if (visited.has(toIndex)) continue;
+          const nextState = moveGazelle(currentState, {
+            fromIndex: currentIndex,
+            toIndex
+          });
+          const nextPath = [...path, toIndex];
+          actions.push({
+            type: 'move',
+            pieceId: 'gazelle',
+            fromIndex,
+            path: nextPath
+          });
+          addGazelleRoutes(nextState, toIndex, nextPath, new Set([...visited, toIndex]));
+        }
+      };
+      addGazelleRoutes(state, fromIndex, [], new Set([fromIndex]));
+    }
+  }
+
+  return actions;
+}
+
 function isValidPiece(piece) {
   return piece &&
     (piece.player === 'black' || piece.player === 'white') &&
@@ -593,8 +659,9 @@ function isValidPiece(piece) {
 }
 
 export function isGameState(value) {
-  if (!value || value.version !== 5 ||
+  if (!value || value.version !== 6 ||
       !Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, value.boardId)) return false;
+  if (value.aiPlayer !== null && value.aiPlayer !== 'black' && value.aiPlayer !== 'white') return false;
   if (!Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) return false;
   if (value.currentPlayer !== 'white' && value.currentPlayer !== 'black') return false;
   if (value.status !== 'playing' && value.status !== 'finished') return false;
@@ -658,7 +725,7 @@ export function isGameState(value) {
 
 export function migrateGameState(value) {
   if (isGameState(value)) return value;
-  if (!value || ![1, 2, 3, 4].includes(value.version) ||
+  if (!value || ![1, 2, 3, 4, 5].includes(value.version) ||
       ![LEGACY_BOARD_ID, BOARD_ID, ADVANCED_BOARD_ID].includes(value.boardId) ||
       !Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) {
     return null;
@@ -676,8 +743,9 @@ export function migrateGameState(value) {
       : value.currentPlayer;
     const migratedLegacy = {
       ...value,
-      version: 5,
+      version: 6,
       boardId: normalizeBoardId(value.boardId),
+      aiPlayer: null,
       captured: [],
       gazelleMove: null,
       currentPlayer,
@@ -697,8 +765,12 @@ export function migrateGameState(value) {
   const resumedAfterWin = value.status === 'playing' && aligned.size > 0 && gazelleMove === null;
   const migrated = {
     ...value,
-    version: 5,
+    version: 6,
     boardId: normalizeBoardId(value.boardId),
+    aiPlayer: value.version === 5 &&
+      (value.aiPlayer === 'black' || value.aiPlayer === 'white')
+      ? value.aiPlayer
+      : null,
     status: resumedAfterWin ? 'finished' : value.status,
     winner: resumedAfterWin ? migratedWinner : value.winner,
     captured,

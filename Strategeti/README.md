@@ -16,10 +16,12 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - La fin de partie affiche le vainqueur et la raison de la victoire au centre du plateau.
 - Les pièces mangées sont suivies à droite du plateau et ne retournent pas au stock jouable.
 - Un joueur perd si cinq de ses pièces ont été mangées ou s’il n’a aucun coup légal à son tour.
+- Une partie peut se jouer à deux ou contre l’IA, qui peut jouer avec les pièces noires ou blanches. Elle compare ses coups légaux et les réponses possibles de l’adversaire, en tenant compte des captures, des alignements et du contrôle du centre.
 
 ## Architecture
 
-- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale.
+- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale. Les sauvegardes sont migrées vers la version actuelle du modèle.
+- `js/ai.js` choisit un coup légal en comparant les réponses possibles à un tour de profondeur.
 - `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.
 - `js/app.js` affiche l’état du jeu et les règles, collecte les interactions et appelle cette API.
 - `js/storage.js` gère le stockage IndexedDB, sans logique d’affichage.

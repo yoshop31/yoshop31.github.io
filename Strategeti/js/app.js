@@ -7,6 +7,7 @@ import {
   PIECES,
   PLAYERS
 } from './game.js';
+import { chooseAiMove } from './ai.js';
 import {
   cancelGameGazelleMove,
   finishGameGazelleMove,
@@ -39,6 +40,7 @@ const saveStatus = document.querySelector('#save-status');
 const restartButton = document.querySelector('#restart-button');
 const newGameForm = document.querySelector('#new-game-form');
 const newGameButton = document.querySelector('#new-game-button');
+const playerModeSelect = document.querySelector('#player-mode');
 const confirmDialog = document.querySelector('#confirm-dialog');
 const confirmTitle = document.querySelector('#confirm-title');
 const confirmMessage = document.querySelector('#confirm-message');
@@ -54,6 +56,8 @@ let selectedPiece = null;
 let selectedBoardPiece = null;
 let pendingOperation = null;
 let isSaving = false;
+let isAiThinking = false;
+let aiTurnKey = null;
 let rulesReturnTarget = setupPanel;
 
 function showSetup() {
@@ -110,7 +114,9 @@ function describeStock(player) {
       button.type = 'button';
       button.className = 'piece-choice';
       button.disabled = isSaving ||
+        isAiThinking ||
         gameState.status !== 'playing' ||
+        gameState.aiPlayer === gameState.currentPlayer ||
         gameState.gazelleMove !== null ||
         gameState.currentPlayer !== player;
       button.setAttribute('aria-pressed', String(
@@ -191,7 +197,9 @@ function renderBoard() {
     button.setAttribute('aria-rowindex', String(row));
     button.setAttribute('aria-colindex', String(column));
     button.disabled = isSaving ||
+      isAiThinking ||
       gameState.status !== 'playing' ||
+      gameState.aiPlayer === gameState.currentPlayer ||
       (selectedPiece !== null && !cell &&
        !isPlacementAllowed(gameState.boardId, index)) ||
       !(selectedBoardPiece !== null ? canMoveToCell : canSelectPiece || !cell);
@@ -320,6 +328,10 @@ function renderGame() {
   placementRuleHint.textContent = gameState.boardId === ADVANCED_BOARD_ID
     ? 'Les quatre cases centrales sont interdites à la pose ; les déplacements sur ces cases restent autorisés.'
     : 'Les quatre coins sont interdits à la pose ; les déplacements sur ces cases restent autorisés.';
+  document.querySelector('#black-title .player-position').textContent =
+    gameState.aiPlayer === 'black' ? '— en haut · IA' : '— en haut';
+  document.querySelector('#white-title .player-position').textContent =
+    gameState.aiPlayer === 'white' ? '— en bas · IA' : '— en bas';
   renderBoard();
   renderGazelleMoveControls();
   describeStock('black');
@@ -346,7 +358,9 @@ function renderGame() {
     gameMessage.textContent = '';
   } else {
     gameResult.hidden = true;
-    turnIndicator.textContent = `Au tour de ${PLAYERS[gameState.currentPlayer].name}`;
+    turnIndicator.textContent = `Au tour de ${PLAYERS[gameState.currentPlayer].name}${
+      gameState.aiPlayer === gameState.currentPlayer ? ' (IA)' : ''
+    }`;
     if (!gameMessage.textContent) {
       gameMessage.textContent = selectedBoardPiece !== null
         ? selectedBoardPiece.pieceId === 'elephant'
@@ -368,6 +382,77 @@ function renderGame() {
     gameMessage.textContent = nextJumps.length > 0
       ? 'Choisissez une destination pour continuer, cliquez sur la gazelle pour terminer ou sur sa case de départ pour annuler.'
       : 'Aucun autre saut possible : cliquez sur la gazelle pour terminer ou sur sa case de départ pour annuler.';
+  }
+
+  restartButton.disabled = isAiThinking;
+  newGameButton.disabled = isAiThinking;
+  scheduleAiTurn();
+}
+
+function scheduleAiTurn() {
+  if (isSaving || isAiThinking || gamePanel.hidden ||
+      gameState.status !== 'playing' ||
+      gameState.aiPlayer !== gameState.currentPlayer ||
+      aiTurnKey === gameState.moveCount) return;
+
+  aiTurnKey = gameState.moveCount;
+  playAiTurn(gameState.moveCount);
+}
+
+async function playAiTurn(expectedMoveCount) {
+  isAiThinking = true;
+  try {
+    const action = chooseAiMove(gameState);
+    selectedPiece = action.type === 'place'
+      ? { pieceId: action.pieceId, instanceIndex: 0 }
+      : null;
+    selectedBoardPiece = action.type === 'move'
+      ? { index: action.fromIndex, pieceId: action.pieceId }
+      : null;
+    const pieceName = PIECES.find(piece => piece.id === action.pieceId).name.toLowerCase();
+    gameMessage.textContent = `L’IA a choisi ${pieceName}. Son coup sera joué dans 2 secondes.`;
+    renderGame();
+    await new Promise(resolve => window.setTimeout(resolve, 2000));
+    while (gamePanel.hidden) {
+      await new Promise(resolve => window.setTimeout(resolve, 100));
+    }
+    if (gameState.moveCount !== expectedMoveCount ||
+        gameState.currentPlayer !== gameState.aiPlayer) return;
+
+    isSaving = true;
+    renderGame();
+    if (action.type === 'place') {
+      gameState = await playGameMove(gameState, {
+        cellIndex: action.cellIndex,
+        pieceId: action.pieceId
+      });
+    } else if (action.pieceId === 'gazelle') {
+      let fromIndex = action.fromIndex;
+      for (const toIndex of action.path) {
+        gameState = await moveGameGazelle(gameState, { fromIndex, toIndex });
+        fromIndex = toIndex;
+        selectedBoardPiece = { index: toIndex, pieceId: 'gazelle' };
+        renderGame();
+      }
+      gameState = await finishGameGazelleMove(gameState);
+    } else {
+      const move = action.pieceId === 'elephant'
+        ? moveGameElephant
+        : action.pieceId === 'lion'
+          ? moveGameLion
+          : moveGameZebra;
+      gameState = await move(gameState, action);
+    }
+    selectedPiece = null;
+    selectedBoardPiece = null;
+    gameMessage.textContent = 'Coup de l’IA joué.';
+    setSaveStatus('Partie sauvegardée sur cet appareil.');
+  } catch (error) {
+    setSaveStatus(`Coup de l’IA impossible : ${error.message}`, true);
+  } finally {
+    isSaving = false;
+    isAiThinking = false;
+    renderGame();
   }
 }
 
@@ -525,7 +610,7 @@ async function beginGame(action) {
   newGameForm.querySelector('button[type="submit"]').disabled = true;
   try {
     setSaveStatus('Enregistrement…');
-    const nextState = await startGame(action.boardId);
+    const nextState = await startGame(action.boardId, action.aiPlayer);
     gameState = nextState;
     selectedPiece = null;
     selectedBoardPiece = null;
@@ -568,7 +653,11 @@ returnFromRulesButton.addEventListener('click', () => {
 
 newGameForm.addEventListener('submit', event => {
   event.preventDefault();
-  const action = { type: 'new', boardId: document.querySelector('#board-choice').value };
+  const action = {
+    type: 'new',
+    boardId: document.querySelector('#board-choice').value,
+    aiPlayer: playerModeSelect.value === 'none' ? null : playerModeSelect.value
+  };
   if (gameState) {
     requestConfirmation(action);
   } else {
@@ -577,7 +666,13 @@ newGameForm.addEventListener('submit', event => {
 });
 
 restartButton.addEventListener('click', () => {
-  if (gameState) requestConfirmation({ type: 'restart', boardId: gameState.boardId });
+  if (gameState) {
+    requestConfirmation({
+      type: 'restart',
+      boardId: gameState.boardId,
+      aiPlayer: gameState.aiPlayer
+    });
+  }
 });
 
 document.querySelector('#resume-button').addEventListener('click', showGame);

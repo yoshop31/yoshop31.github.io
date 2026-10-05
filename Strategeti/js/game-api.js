@@ -24,8 +24,8 @@ export async function loadSavedGame() {
   return state;
 }
 
-export async function startGame(boardId) {
-  const state = createGame(boardId);
+export async function startGame(boardId, aiPlayer = null) {
+  const state = createGame(boardId, aiPlayer);
   await saveGame(state);
   return state;
 }
