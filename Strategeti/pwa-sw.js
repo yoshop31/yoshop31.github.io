@@ -6,7 +6,7 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-2.9';
+var cache_storage_name = 'strategeti-pwa-2.9';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
@@ -40,7 +40,7 @@ self.addEventListener('activate', function (e) {
 	console.log('PWA sw activation');
 	e.waitUntil(caches.keys().then(function (kl) {
 		return Promise.all(kl.map(function (key) {
-			if ((key.indexOf('strategeti-') === 0 || key === 'redcherry-pwa-1.0') && key !== cache_storage_name) {
+			if ((key.indexOf('strategeti-') === 0 || key.indexOf('strategeti-pwa-') === 0) && key !== cache_storage_name) {
 				console.log('PWA old cache removed', key);
 				return caches.delete(key);
 			}
