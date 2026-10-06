@@ -14,7 +14,8 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - La gazelle ne se déplace qu’en sautant par-dessus une suite continue d’animaux ; elle atterrit sur la première case vide après cette suite. Elle peut sauter horizontalement, verticalement ou en diagonale, puis enchaîner d’autres sauts en changeant de direction. Après chaque saut, le joueur peut continuer, cliquer sur la gazelle pour terminer ou cliquer sur sa case de départ pour annuler tout le déplacement.
 - Quatre pièces de même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.
 - La fin de partie affiche le vainqueur et la raison de la victoire au centre du plateau.
-- Les pièces mangées sont suivies à droite du plateau et ne retournent pas au stock jouable.
+- Les pièces mangées sont suivies individuellement à droite du plateau et ne retournent pas au stock jouable.
+- Le joueur actif est indiqué par un cadre brun autour de sa réserve ; chaque changement de joueur est signalé par un son de pièce posée.
 - Un joueur perd si cinq de ses pièces ont été mangées ou s’il n’a aucun coup légal à son tour.
 - Une partie peut se jouer à deux ou contre l’IA, qui peut jouer avec les pièces noires ou blanches. Le niveau débutant compare les coups légaux aux réponses immédiates de l’adversaire ; le niveau fort examine trois demi-coups avec recherche alpha-bêta et tri des réponses.
 

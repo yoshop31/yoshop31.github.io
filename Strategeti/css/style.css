@@ -282,6 +282,12 @@ h2 {
   background: rgba(255, 255, 255, 0.83);
 }
 
+.player-zone.is-current-player {
+  border-color: #765437;
+  background: #fffaf1;
+  box-shadow: 0 0 0 2px rgba(118, 84, 55, 0.18);
+}
+
 .player-heading {
   display: flex;
   align-items: center;
@@ -468,18 +474,17 @@ h2 {
 
 .captured-pieces {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(27px, 1fr));
   min-height: 20px;
   gap: 4px;
 }
 
 .captured-piece {
   display: inline-flex;
-  width: 100%;
-  min-width: 27px;
+  min-width: 0;
   min-height: 25px;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 2px;
   padding: 2px 4px;
   border: 1px solid #e0e4dd;

@@ -47,11 +47,14 @@ const confirmTitle = document.querySelector('#confirm-title');
 const confirmMessage = document.querySelector('#confirm-message');
 const confirmAction = document.querySelector('#confirm-action');
 const capturedStock = document.querySelector('#captured-stock');
+const blackPlayerZone = document.querySelector('.player-black');
+const whitePlayerZone = document.querySelector('.player-white');
 const gazelleMoveControls = document.querySelector('#gazelle-move-controls');
 const gazelleMoveProgress = document.querySelector('#gazelle-move-progress');
 const finishGazelleMoveButton = document.querySelector('#finish-gazelle-move');
 const cancelGazelleMoveButton = document.querySelector('#cancel-gazelle-move');
 
+let turnChangeAudioContext = null;
 let gameState = null;
 let selectedPiece = null;
 let selectedBoardPiece = null;
@@ -59,11 +62,74 @@ let pendingOperation = null;
 let isSaving = false;
 let isAiThinking = false;
 let aiTurnKey = null;
+let lastRenderedCurrentPlayer = null;
 let rulesReturnTarget = setupPanel;
 const aiPlayers = {
   beginner: new BeginnerAI(),
   strong: new StrongAI()
 };
+
+function prepareTurnChangeSound() {
+  if (!window.AudioContext) return;
+  try {
+    turnChangeAudioContext ??= new window.AudioContext();
+    if (turnChangeAudioContext.state === 'suspended') {
+      turnChangeAudioContext.resume().catch(error => {
+        console.error('Impossible d’activer le son de changement de joueur.', error);
+      });
+    }
+  } catch (error) {
+    console.error('Impossible de préparer le son de changement de joueur.', error);
+  }
+}
+
+function playWoodPieceSound() {
+  const context = turnChangeAudioContext;
+  if (!context) return;
+  if (context.state !== 'running') {
+    context.resume().then(() => {
+      if (context.state === 'running') playWoodPieceSound();
+    }).catch(error => {
+      console.error('Impossible de jouer le son de changement de joueur.', error);
+    });
+    return;
+  }
+
+  const startTime = context.currentTime;
+  const duration = 0.14;
+  const noiseBuffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
+  const noiseSamples = noiseBuffer.getChannelData(0);
+  for (let index = 0; index < noiseSamples.length; index += 1) {
+    noiseSamples[index] = Math.random() * 2 - 1;
+  }
+
+  const noise = context.createBufferSource();
+  noise.buffer = noiseBuffer;
+  const filter = context.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 1300;
+  const noiseGain = context.createGain();
+  noiseGain.gain.setValueAtTime(0.16, startTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(context.destination);
+  noise.start(startTime);
+  noise.stop(startTime + duration);
+
+  for (const [frequency, volume] of [[185, 0.08], [345, 0.035]]) {
+    const tone = context.createOscillator();
+    const toneGain = context.createGain();
+    tone.type = 'triangle';
+    tone.frequency.setValueAtTime(frequency, startTime);
+    toneGain.gain.setValueAtTime(volume, startTime);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.11);
+    tone.connect(toneGain);
+    toneGain.connect(context.destination);
+    tone.start(startTime);
+    tone.stop(startTime + 0.11);
+  }
+}
 
 function showSetup() {
   setupPanel.hidden = false;
@@ -132,6 +198,7 @@ function describeStock(player) {
       button.setAttribute('aria-label', `${piece.name} ${instanceIndex + 1} sur ${count}`);
       button.innerHTML = `<span class="piece-icon" aria-hidden="true">${piece.icon}</span>`;
       button.addEventListener('click', () => {
+        prepareTurnChangeSound();
         const isSelected = selectedPiece?.pieceId === piece.id &&
           selectedPiece.instanceIndex === instanceIndex;
         selectedPiece = isSelected ? null : { pieceId: piece.id, instanceIndex };
@@ -238,7 +305,10 @@ function renderBoard() {
       button.classList.toggle('placement-forbidden', !placementAllowed);
       button.innerHTML = '<span class="empty-marker" aria-hidden="true"></span>';
     }
-    button.addEventListener('click', () => handleBoardClick(index));
+    button.addEventListener('click', () => {
+      prepareTurnChangeSound();
+      handleBoardClick(index);
+    });
     boardElement.append(button);
   });
 }
@@ -314,19 +384,30 @@ function renderCapturedStock() {
       const count = gameState.captured.filter(item =>
         item.player === player && item.pieceId === piece.id
       ).length;
-      if (count === 0) continue;
-      const item = document.createElement('span');
-      item.className = 'captured-piece';
-      item.setAttribute('aria-label', `${count} ${piece.name}${count === 1 ? '' : 's'}`);
-      item.title = `${count} ${piece.name}${count === 1 ? '' : 's'}`;
-      item.innerHTML = `<span aria-hidden="true">${piece.icon}</span>${count > 1 ? `<span aria-hidden="true">×${count}</span>` : ''}`;
-      container.append(item);
+      for (let index = 0; index < count; index += 1) {
+        const item = document.createElement('span');
+        item.className = 'captured-piece';
+        item.setAttribute('aria-label', piece.name);
+        item.title = piece.name;
+        item.innerHTML = `<span aria-hidden="true">${piece.icon}</span>`;
+        container.append(item);
+      }
     }
   }
   capturedStock.classList.toggle('has-captured', gameState.captured.length > 0);
 }
 
 function renderGame() {
+  const activePlayer = gameState.status === 'playing' ? gameState.currentPlayer : null;
+  blackPlayerZone.classList.toggle('is-current-player', activePlayer === 'black');
+  whitePlayerZone.classList.toggle('is-current-player', activePlayer === 'white');
+  if (lastRenderedCurrentPlayer !== null &&
+      activePlayer !== null &&
+      activePlayer !== lastRenderedCurrentPlayer) {
+    playWoodPieceSound();
+  }
+  lastRenderedCurrentPlayer = activePlayer;
+
   const currentBoardName = getBoardName(gameState.boardId);
   boardNameElement.textContent = currentBoardName;
   boardHeading.textContent = currentBoardName;
@@ -622,6 +703,7 @@ async function beginGame(action) {
     const nextState = await startGame(action.boardId, action.aiPlayer, action.aiLevel);
     gameState = nextState;
     aiTurnKey = null;
+    lastRenderedCurrentPlayer = null;
     selectedPiece = null;
     selectedBoardPiece = null;
     gameMessage.textContent = '';
@@ -663,6 +745,7 @@ returnFromRulesButton.addEventListener('click', () => {
 
 newGameForm.addEventListener('submit', event => {
   event.preventDefault();
+  prepareTurnChangeSound();
   const action = {
     type: 'new',
     boardId: document.querySelector('#board-choice').value,
@@ -687,8 +770,14 @@ restartButton.addEventListener('click', () => {
   }
 });
 
-document.querySelector('#resume-button').addEventListener('click', showGame);
-finishGazelleMoveButton.addEventListener('click', finishGazelleMove);
+document.querySelector('#resume-button').addEventListener('click', () => {
+  prepareTurnChangeSound();
+  showGame();
+});
+finishGazelleMoveButton.addEventListener('click', () => {
+  prepareTurnChangeSound();
+  finishGazelleMove();
+});
 cancelGazelleMoveButton.addEventListener('click', cancelGazelleMove);
 
 async function initialize() {
