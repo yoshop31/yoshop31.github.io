@@ -7,8 +7,6 @@ import {
   PIECES,
   PLAYERS
 } from './game.js';
-import { BeginnerAI } from './ai.js';
-import { StrongAI } from './ai-strong.js';
 import {
   cancelGameGazelleMove,
   finishGameGazelleMove,
@@ -64,10 +62,7 @@ let isAiThinking = false;
 let aiTurnKey = null;
 let lastRenderedCurrentPlayer = null;
 let rulesReturnTarget = setupPanel;
-const aiPlayers = {
-  beginner: new BeginnerAI(),
-  strong: new StrongAI()
-};
+const aiWorkerUrl = new URL('./ai-worker.js', import.meta.url);
 
 function prepareTurnChangeSound() {
   if (!window.AudioContext) return;
@@ -479,6 +474,38 @@ function renderGame() {
   scheduleAiTurn();
 }
 
+function chooseAiMove(state) {
+  return new Promise((resolve, reject) => {
+    let worker;
+    try {
+      worker = new Worker(aiWorkerUrl, { type: 'module' });
+    } catch (error) {
+      reject(error);
+      return;
+    }
+
+    const terminateWorker = () => worker.terminate();
+    worker.addEventListener('message', event => {
+      terminateWorker();
+      if (event.data.error) {
+        reject(new Error(event.data.error));
+      } else {
+        resolve(event.data.action);
+      }
+    }, { once: true });
+    worker.addEventListener('error', event => {
+      terminateWorker();
+      reject(new Error(event.message || 'Le calcul du coup de l’IA a échoué.'));
+    }, { once: true });
+    try {
+      worker.postMessage({ state, level: state.aiLevel });
+    } catch (error) {
+      terminateWorker();
+      reject(error);
+    }
+  });
+}
+
 function scheduleAiTurn() {
   if (isSaving || isAiThinking || gamePanel.hidden ||
       gameState.status !== 'playing' ||
@@ -492,7 +519,10 @@ function scheduleAiTurn() {
 async function playAiTurn(expectedMoveCount) {
   isAiThinking = true;
   try {
-    const action = aiPlayers[gameState.aiLevel].chooseMove(gameState);
+    gameMessage.textContent = 'L’IA réfléchit…';
+    const actionPromise = chooseAiMove(gameState);
+    renderGame();
+    const action = await actionPromise;
     selectedPiece = action.type === 'place'
       ? { pieceId: action.pieceId, instanceIndex: 0 }
       : null;

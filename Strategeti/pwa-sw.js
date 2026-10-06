@@ -6,7 +6,7 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-pwa-4.1';
+var cache_storage_name = 'strategeti-pwa-4.3';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
@@ -16,6 +16,7 @@ var first_cache_urls = [
 	'js/game.js',
 	'js/ai.js',
 	'js/ai-strong.js',
+	'js/ai-worker.js',
 	'js/game-api.js',
 	'js/storage.js',
 	'js/app.js',

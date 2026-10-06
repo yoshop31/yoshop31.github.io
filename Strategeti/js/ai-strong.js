@@ -5,8 +5,8 @@ import {
   opponentOf
 } from './ai.js';
 
-const SEARCH_DEPTH = 2;
-const MAX_ORDERED_ACTIONS = 10;
+const SEARCH_DEPTH = 6;//initial =2
+const MAX_ORDERED_ACTIONS = 15;//initial =10
 
 function orderActions(state, actions, player, maximize, limit = MAX_ORDERED_ACTIONS) {
   const ordered = actions
