@@ -238,7 +238,10 @@ function advanceTurn(state, changes, player) {
   return nextState;
 }
 
-const PLAYER_TYPES = ['human', 'beginner', 'strong', 'ultra'];
+function isValidPlayerType(playerType) {
+  return playerType === 'human' ||
+    (typeof playerType === 'string' && /^[a-z][a-z0-9-]*$/.test(playerType));
+}
 
 function normalizePlayers(playersOrAiPlayer, aiLevel) {
   if (playersOrAiPlayer === null || playersOrAiPlayer === undefined) {
@@ -255,23 +258,32 @@ function normalizePlayers(playersOrAiPlayer, aiLevel) {
   return playersOrAiPlayer;
 }
 
-export function createGame(boardId = BOARD_ID, playersOrAiPlayer = null, aiLevel) {
+export function createGame(
+  boardId = BOARD_ID,
+  playersOrAiPlayer = null,
+  aiLevel,
+  llmModel = 'gpt-oss:20b'
+) {
   boardId = normalizeBoardId(boardId);
   if (!Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, boardId)) {
     throw new Error('Ce plateau n’est pas disponible.');
   }
   const players = normalizePlayers(playersOrAiPlayer, aiLevel);
   if (!players || typeof players !== 'object' ||
-      !PLAYER_TYPES.includes(players.black) || !PLAYER_TYPES.includes(players.white)) {
+      !isValidPlayerType(players.black) || !isValidPlayerType(players.white)) {
     throw new Error('Les types de joueurs sélectionnés ne sont pas disponibles.');
+  }
+  if (typeof llmModel !== 'string' || !/^[a-zA-Z0-9._:/-]{1,200}$/.test(llmModel)) {
+    throw new Error('Le modèle Ollama sélectionné n’est pas valide.');
   }
 
   const stock = Object.fromEntries(PIECES.map(piece => [piece.id, 2]));
 
   return {
-    version: 8,
+    version: 9,
     boardId,
     players: { black: players.black, white: players.white },
+    llmModel,
     board: Array(BOARD_SIZE * BOARD_SIZE).fill(null),
     stocks: {
       black: { ...stock },
@@ -678,11 +690,13 @@ function isValidPiece(piece) {
 }
 
 export function isGameState(value) {
-  if (!value || value.version !== 8 ||
+  if (!value || value.version !== 9 ||
       !Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, value.boardId)) return false;
   if (!value.players || typeof value.players !== 'object' ||
-      !PLAYER_TYPES.includes(value.players.black) ||
-      !PLAYER_TYPES.includes(value.players.white)) return false;
+      !isValidPlayerType(value.players.black) ||
+      !isValidPlayerType(value.players.white)) return false;
+  if (typeof value.llmModel !== 'string' ||
+      !/^[a-zA-Z0-9._:/-]{1,200}$/.test(value.llmModel)) return false;
   if (!Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) return false;
   if (value.currentPlayer !== 'white' && value.currentPlayer !== 'black') return false;
   if (value.status !== 'playing' && value.status !== 'finished') return false;
@@ -746,7 +760,7 @@ export function isGameState(value) {
 
 export function migrateGameState(value) {
   if (isGameState(value)) return value;
-  if (!value || ![1, 2, 3, 4, 5, 6, 7].includes(value.version) ||
+  if (!value || ![1, 2, 3, 4, 5, 6, 7, 8].includes(value.version) ||
       ![LEGACY_BOARD_ID, BOARD_ID, ADVANCED_BOARD_ID].includes(value.boardId) ||
       !Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) {
     return null;
@@ -764,9 +778,10 @@ export function migrateGameState(value) {
       : value.currentPlayer;
     const migratedLegacy = {
       ...value,
-      version: 8,
+      version: 9,
       boardId: normalizeBoardId(value.boardId),
       players: { black: 'human', white: 'human' },
+      llmModel: 'gpt-oss:20b',
       captured: [],
       gazelleMove: null,
       currentPlayer,
@@ -790,8 +805,13 @@ export function migrateGameState(value) {
       ? value.aiLevel
       : 'beginner'
     : 'human';
-  const players = { black: 'human', white: 'human' };
-  if (value.version >= 6 &&
+  const players = value.version === 8 &&
+    value.players &&
+    isValidPlayerType(value.players.black) &&
+    isValidPlayerType(value.players.white)
+    ? { black: value.players.black, white: value.players.white }
+    : { black: 'human', white: 'human' };
+  if (value.version < 8 && value.version >= 6 &&
       (value.aiPlayer === 'black' || value.aiPlayer === 'white')) {
     players[value.aiPlayer] = migratedPlayer;
   }
@@ -800,9 +820,12 @@ export function migrateGameState(value) {
   delete legacyState.aiLevel;
   const migrated = {
     ...legacyState,
-    version: 8,
+    version: 9,
     boardId: normalizeBoardId(value.boardId),
     players,
+    llmModel: value.version === 8 && typeof value.llmModel === 'string'
+      ? value.llmModel
+      : 'gpt-oss:20b',
     status: resumedAfterWin ? 'finished' : value.status,
     winner: resumedAfterWin ? migratedWinner : value.winner,
     captured,

@@ -17,13 +17,13 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - Les pièces mangées sont suivies individuellement à droite du plateau et ne retournent pas au stock jouable.
 - Le joueur actif est indiqué par un cadre brun autour de sa réserve ; chaque changement de joueur est signalé par un son de pièce posée.
 - Un joueur perd si cinq de ses pièces ont été mangées ou s’il n’a aucun coup légal à son tour.
-- Le type de joueur se choisit indépendamment pour Noir et Blanc : joueur humain, IA débutante, forte ou ultra. Deux IA peuvent s’affronter. L’IA débutante compare les coups légaux aux réponses immédiates ; les IA plus fortes réutilisent le même moteur alpha-bêta avec des paramètres de recherche différents.
-- La page `test-ia.html` permet de simuler jusqu’à 100 parties entre deux niveaux d’IA, avec inversion des couleurs entre les parties, avancement par partie et par coup, et un résultat nul après 200 coups.
+- Le type de joueur se choisit indépendamment pour Noir et Blanc : joueur humain, IA débutante, forte, ultra ou LLMIA. Deux IA peuvent s’affronter. L’IA débutante compare les coups légaux aux réponses immédiates ; les IA plus fortes réutilisent le même moteur alpha-bêta avec des paramètres de recherche différents. LLMIA demande un coup à un modèle Ollama local, à partir des règles, de l’état du jeu et de la liste des coups légaux, puis vérifie le coup choisi. En cas de réponse invalide ou de délai dépassé (60 secondes), le joueur peut renvoyer la demande.
+- La page `test-ia.html` permet de simuler jusqu’à 100 parties entre deux types d’IA, avec inversion des couleurs entre les parties, avancement par partie et par coup, et un résultat nul après 200 coups. Les simulations LLMIA utilisent également Ollama.
 
 ## Architecture
 
 - `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale. Le modèle mémorise le type de joueur indépendamment pour chaque couleur ; les anciennes sauvegardes sont migrées automatiquement.
-- `js/ai.js` contient la classe `BeginnerAI` ; `js/ai-strong.js` contient la classe `StrongAI` et son moteur de recherche alpha-bêta. `js/ai-worker.js` calcule leurs coups dans un Web Worker pour laisser l’interface réactive pendant la réflexion.
+- `js/ai.js`, `js/ai-strong.js` et `js/ai-ultra.js` contiennent les IA locales ; `js/llm-ai.js` intègre Ollama et `js/ai-registry.js` centralise l’enregistrement des types d’IA. `js/llm-settings.js` gère le modèle Ollama. `js/ai-worker.js` calcule les coups dans un Web Worker pour laisser l’interface réactive pendant la réflexion.
 - `js/test-ia.js` pilote l’interface du banc d’essai ; `js/ai-battle-worker.js` simule les parties et transmet leur avancement sans utiliser le plateau graphique.
 - `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.
 - `js/app.js` affiche l’état du jeu et les règles, collecte les interactions et appelle cette API.
@@ -35,3 +35,5 @@ L’état est sauvegardé après chaque coup et lors de la création ou de la re
 ## Lancer en local
 
 Servir le dossier `Strategeti` avec un serveur HTTP local, puis ouvrir `index.html` via cette adresse. Les modules JavaScript, IndexedDB et le Service Worker nécessitent un contexte sécurisé : `localhost` convient pour le développement. Après le premier chargement réussi, les ressources de l’application sont disponibles hors ligne.
+
+Pour utiliser LLMIA, lancer Ollama sur `http://localhost:11434` et installer un modèle (par défaut `gpt-oss:20b`). L’origine utilisée par le navigateur doit être autorisée dans la configuration CORS d’Ollama. Les IA classiques fonctionnent sans Ollama.

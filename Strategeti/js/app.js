@@ -7,6 +7,13 @@ import {
   PIECES,
   PLAYERS
 } from './game.js';
+import { AI_TYPES, getAIName } from './ai-registry.js';
+import {
+  DEFAULT_OLLAMA_MODEL,
+  getOllamaModels,
+  getPreferredOllamaModel,
+  savePreferredOllamaModel
+} from './llm-settings.js';
 import {
   cancelGameGazelleMove,
   finishGameGazelleMove,
@@ -35,12 +42,17 @@ const gameResultWinner = document.querySelector('#game-result-winner');
 const gameResultReason = document.querySelector('#game-result-reason');
 const turnIndicator = document.querySelector('#turn-indicator');
 const gameMessage = document.querySelector('#game-message');
+const retryAiButton = document.querySelector('#retry-ai-button');
 const saveStatus = document.querySelector('#save-status');
 const restartButton = document.querySelector('#restart-button');
 const newGameForm = document.querySelector('#new-game-form');
 const newGameButton = document.querySelector('#new-game-button');
 const blackPlayerSelect = document.querySelector('#black-player');
 const whitePlayerSelect = document.querySelector('#white-player');
+const llmModelField = document.querySelector('#llm-model-field');
+const llmModelInput = document.querySelector('#llm-model');
+const ollamaModelsList = document.querySelector('#ollama-models');
+const llmModelStatus = document.querySelector('#llm-model-status');
 const confirmDialog = document.querySelector('#confirm-dialog');
 const confirmTitle = document.querySelector('#confirm-title');
 const confirmMessage = document.querySelector('#confirm-message');
@@ -64,12 +76,46 @@ let aiTurnKey = null;
 let lastRenderedCurrentPlayer = null;
 let rulesReturnTarget = setupPanel;
 const aiWorkerUrl = new URL('./ai-worker.js', import.meta.url);
-const aiNames = {
-  human: 'Joueur',
-  beginner: 'IA débutante',
-  strong: 'IA forte',
-  ultra: 'IA ultra'
-};
+
+function populateAiChoices() {
+  for (const select of [blackPlayerSelect, whitePlayerSelect]) {
+    for (const ai of AI_TYPES) {
+      const option = document.createElement('option');
+      option.value = ai.id;
+      option.textContent = ai.label;
+      select.append(option);
+    }
+  }
+}
+
+function updateLlmModelVisibility() {
+  const needsLlm = blackPlayerSelect.value === 'llm' || whitePlayerSelect.value === 'llm';
+  llmModelField.hidden = !needsLlm;
+  llmModelInput.required = needsLlm;
+}
+
+async function initializeOllamaModels() {
+  try {
+    const models = await getOllamaModels();
+    ollamaModelsList.replaceChildren();
+    for (const model of models) {
+      const option = document.createElement('option');
+      option.value = model;
+      ollamaModelsList.append(option);
+    }
+    const preferredModel = getPreferredOllamaModel();
+    llmModelInput.value = models.includes(preferredModel)
+      ? preferredModel
+      : models.includes(DEFAULT_OLLAMA_MODEL)
+        ? DEFAULT_OLLAMA_MODEL
+        : models[0] ?? preferredModel;
+    llmModelStatus.textContent = models.length
+      ? `${models.length} modèle(s) Ollama disponible(s).`
+      : 'Aucun modèle Ollama installé.';
+  } catch (error) {
+    llmModelStatus.textContent = `Impossible de récupérer les modèles Ollama : ${error.message}`;
+  }
+}
 
 function prepareTurnChangeSound() {
   if (!window.AudioContext) return;
@@ -417,9 +463,9 @@ function renderGame() {
     ? 'Les quatre cases centrales sont interdites à la pose ; les déplacements sur ces cases restent autorisés.'
     : 'Les quatre coins sont interdits à la pose ; les déplacements sur ces cases restent autorisés.';
   document.querySelector('#black-title .player-position').textContent =
-    `— en haut · ${aiNames[gameState.players.black]}`;
+    `— en haut · ${getAIName(gameState.players.black)}`;
   document.querySelector('#white-title .player-position').textContent =
-    `— en bas · ${aiNames[gameState.players.white]}`;
+    `— en bas · ${getAIName(gameState.players.white)}`;
   renderBoard();
   renderGazelleMoveControls();
   describeStock('black');
@@ -449,7 +495,7 @@ function renderGame() {
     turnIndicator.textContent = `Au tour de ${PLAYERS[gameState.currentPlayer].name}${
       gameState.players[gameState.currentPlayer] === 'human'
         ? ''
-        : ` (${aiNames[gameState.players[gameState.currentPlayer]]})`
+        : ` (${getAIName(gameState.players[gameState.currentPlayer])})`
     }`;
     if (!gameMessage.textContent) {
       gameMessage.textContent = selectedBoardPiece !== null
@@ -479,7 +525,7 @@ function renderGame() {
   scheduleAiTurn();
 }
 
-function chooseAiMove(state, level) {
+function chooseAiMove(state, level, model) {
   return new Promise((resolve, reject) => {
     let worker;
     try {
@@ -503,7 +549,7 @@ function chooseAiMove(state, level) {
       reject(new Error(event.message || 'Le calcul du coup de l’IA a échoué.'));
     }, { once: true });
     try {
-      worker.postMessage({ state, level });
+      worker.postMessage({ state, level, model });
     } catch (error) {
       terminateWorker();
       reject(error);
@@ -523,14 +569,18 @@ function scheduleAiTurn() {
 
 async function playAiTurn(expectedMoveCount) {
   isAiThinking = true;
+  let actionReceived = false;
+  retryAiButton.hidden = true;
   try {
     gameMessage.textContent = 'L’IA réfléchit…';
     const actionPromise = chooseAiMove(
       gameState,
-      gameState.players[gameState.currentPlayer]
+      gameState.players[gameState.currentPlayer],
+      gameState.llmModel
     );
     renderGame();
     const action = await actionPromise;
+    actionReceived = true;
     selectedPiece = action.type === 'place'
       ? { pieceId: action.pieceId, instanceIndex: 0 }
       : null;
@@ -538,7 +588,7 @@ async function playAiTurn(expectedMoveCount) {
       ? { index: action.fromIndex, pieceId: action.pieceId }
       : null;
     const pieceName = PIECES.find(piece => piece.id === action.pieceId).name.toLowerCase();
-    const aiName = aiNames[gameState.players[gameState.currentPlayer]];
+    const aiName = getAIName(gameState.players[gameState.currentPlayer]);
     gameMessage.textContent = `${aiName} a choisi ${pieceName}. Son coup sera joué dans 2 secondes.`;
     renderGame();
     await new Promise(resolve => window.setTimeout(resolve, 2000));
@@ -577,13 +627,29 @@ async function playAiTurn(expectedMoveCount) {
     gameMessage.textContent = 'Coup de l’IA joué.';
     setSaveStatus('Partie sauvegardée sur cet appareil.');
   } catch (error) {
-    setSaveStatus(`Coup de l’IA impossible : ${error.message}`, true);
+    if (!actionReceived && gameState.players[gameState.currentPlayer] === 'llm') {
+      gameMessage.textContent = `LLMIA n’a pas fourni de coup valide : ${error.message}`;
+      retryAiButton.hidden = false;
+      setSaveStatus('Vous pouvez renvoyer la demande à Ollama.', true);
+    } else {
+      setSaveStatus(`Coup de l’IA impossible : ${error.message}`, true);
+    }
   } finally {
     isSaving = false;
     isAiThinking = false;
     renderGame();
   }
 }
+
+retryAiButton.addEventListener('click', () => {
+  if (isSaving || isAiThinking || gameState?.status !== 'playing' ||
+      gameState.players[gameState.currentPlayer] !== 'llm') return;
+  retryAiButton.hidden = true;
+  aiTurnKey = null;
+  gameMessage.textContent = 'Nouvelle demande envoyée à Ollama…';
+  setSaveStatus('');
+  renderGame();
+});
 
 function handleBoardClick(index) {
   const cell = gameState.board[index];
@@ -736,10 +802,12 @@ async function cancelGazelleMove() {
 async function beginGame(action) {
   if (isSaving) return;
   isSaving = true;
+  retryAiButton.hidden = true;
   newGameForm.querySelector('button[type="submit"]').disabled = true;
   try {
     setSaveStatus('Enregistrement…');
-    const nextState = await startGame(action.boardId, action.players);
+    const nextState = await startGame(action.boardId, action.players, action.llmModel);
+    savePreferredOllamaModel(action.llmModel);
     gameState = nextState;
     aiTurnKey = null;
     lastRenderedCurrentPlayer = null;
@@ -785,13 +853,16 @@ returnFromRulesButton.addEventListener('click', () => {
 newGameForm.addEventListener('submit', event => {
   event.preventDefault();
   prepareTurnChangeSound();
+  updateLlmModelVisibility();
+  if (!newGameForm.reportValidity()) return;
   const action = {
     type: 'new',
     boardId: document.querySelector('#board-choice').value,
     players: {
       black: blackPlayerSelect.value,
       white: whitePlayerSelect.value
-    }
+    },
+    llmModel: llmModelInput.value.trim() || getPreferredOllamaModel() || DEFAULT_OLLAMA_MODEL
   };
   if (gameState) {
     requestConfirmation(action);
@@ -805,7 +876,8 @@ restartButton.addEventListener('click', () => {
     requestConfirmation({
       type: 'restart',
       boardId: gameState.boardId,
-      players: { ...gameState.players }
+      players: { ...gameState.players },
+      llmModel: gameState.llmModel
     });
   }
 });
@@ -819,6 +891,15 @@ finishGazelleMoveButton.addEventListener('click', () => {
   finishGazelleMove();
 });
 cancelGazelleMoveButton.addEventListener('click', cancelGazelleMove);
+
+populateAiChoices();
+blackPlayerSelect.addEventListener('change', updateLlmModelVisibility);
+whitePlayerSelect.addEventListener('change', updateLlmModelVisibility);
+llmModelInput.addEventListener('change', () => {
+  if (llmModelInput.value.trim()) savePreferredOllamaModel(llmModelInput.value.trim());
+});
+updateLlmModelVisibility();
+initializeOllamaModels();
 
 async function initialize() {
   try {

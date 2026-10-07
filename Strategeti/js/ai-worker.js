@@ -1,21 +1,10 @@
-import { BeginnerAI } from './ai.js';
-import { StrongAI } from './ai-strong.js';
-import { UltraAI } from './ai-ultra.js';
+import { createAI } from './ai-registry.js';
 
-self.addEventListener('message', event => {
-  const { state, level } = event.data;
+self.addEventListener('message', async event => {
+  const { state, level, model } = event.data;
   try {
-    let ai;
-    if (level === 'beginner') {
-      ai = new BeginnerAI();
-    } else if (level === 'strong') {
-      ai = new StrongAI();
-    } else if (level === 'ultra') {
-      ai = new UltraAI();
-    } else {
-      throw new Error('Niveau d’IA non reconnu.');
-    }
-    const action = ai.chooseMove(state, state.currentPlayer);
+    const ai = createAI(level);
+    const action = await ai.chooseMove(state, state.currentPlayer, model);
     self.postMessage({ action });
   } catch (error) {
     self.postMessage({

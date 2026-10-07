@@ -24,8 +24,8 @@ export async function loadSavedGame() {
   return state;
 }
 
-export async function startGame(boardId, players = null, aiLevel) {
-  const state = createGame(boardId, players, aiLevel);
+export async function startGame(boardId, players = null, llmModel = 'gpt-oss:20b') {
+  const state = createGame(boardId, players, undefined, llmModel);
   await saveGame(state);
   return state;
 }

@@ -1,20 +1,12 @@
 import { createGame } from './game.js';
-import { BeginnerAI, applyAiAction } from './ai.js';
-import { StrongAI } from './ai-strong.js';
-import { UltraAI } from './ai-ultra.js';
+import { applyAiAction } from './ai.js';
+import { createAI } from './ai-registry.js';
 
 const MAX_GAMES = 100;
 const MAX_MOVES_PER_GAME = 200;
 
-function createAi(level) {
-  if (level === 'beginner') return new BeginnerAI();
-  if (level === 'strong') return new StrongAI();
-  if (level === 'ultra') return new UltraAI();
-  throw new Error('Niveau d’IA non reconnu.');
-}
-
-self.addEventListener('message', event => {
-  const { firstLevel, secondLevel, gameCount } = event.data;
+self.addEventListener('message', async event => {
+  const { firstLevel, secondLevel, gameCount, model } = event.data;
   try {
     //if (!['beginner', 'strong'].includes(firstLevel) ||
     //    !['beginner', 'strong'].includes(secondLevel)) {
@@ -24,10 +16,7 @@ self.addEventListener('message', event => {
       throw new Error(`Le nombre de parties doit être compris entre 1 et ${MAX_GAMES}.`);
     }
 
-    const ais = {
-      first: createAi(firstLevel),
-      second: createAi(secondLevel)
-    };
+    const ais = { first: createAI(firstLevel), second: createAI(secondLevel) };
     const scores = {
       firstWins: 0,
       secondWins: 0,
@@ -53,7 +42,7 @@ self.addEventListener('message', event => {
           level: aiKey === 'first' ? firstLevel : secondLevel,
           player: currentPlayer
         });
-        const action = ais[aiKey].chooseMove(state, currentPlayer);
+        const action = await ais[aiKey].chooseMove(state, currentPlayer, model);
         state = applyAiAction(state, action);
       }
 

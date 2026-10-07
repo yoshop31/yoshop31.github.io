@@ -40,17 +40,17 @@
         <label for="black-player">Joueur Noir</label>
         <select id="black-player" name="blackPlayer">
           <option value="human" selected>Joueur</option>
-          <option value="beginner">IA débutante</option>
-          <option value="strong">IA forte</option>
-          <option value="ultra">IA ultra</option>
         </select>
         <label for="white-player">Joueur Blanc</label>
         <select id="white-player" name="whitePlayer">
           <option value="human" selected>Joueur</option>
-          <option value="beginner">IA débutante</option>
-          <option value="strong">IA forte</option>
-          <option value="ultra">IA ultra</option>
         </select>
+        <div class="llm-model-field" id="llm-model-field" hidden>
+          <label for="llm-model">Modèle Ollama pour LLMIA</label>
+          <input id="llm-model" name="llmModel" type="text" list="ollama-models" value="gpt-oss:20b" required>
+          <datalist id="ollama-models"></datalist>
+          <p class="form-status" id="llm-model-status" role="status" aria-live="polite"></p>
+        </div>
         <button class="button button-primary" type="submit">Démarrer la partie</button>
       </form>
       <button class="button button-quiet resume-button" id="resume-button" type="button" hidden>Revenir à la partie</button>
@@ -157,6 +157,7 @@
         </div>
       </div>
       <p class="game-message" id="game-message" aria-live="polite"></p>
+      <button class="button button-quiet" id="retry-ai-button" type="button" hidden>Renvoyer</button>
     </section>
 
     <p class="save-status" id="save-status" role="status" aria-live="polite"></p>
