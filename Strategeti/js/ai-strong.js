@@ -8,7 +8,7 @@ import {
 const SEARCH_DEPTH = 2;//initial =2
 const MAX_ORDERED_ACTIONS = 10;//initial =10
 
-function orderActions(state, actions, player, maximize, limit = MAX_ORDERED_ACTIONS) {
+function orderActions(state, actions, player, maximize, limit) {
   const ordered = actions
     .map(action => ({
       action,
@@ -20,7 +20,7 @@ function orderActions(state, actions, player, maximize, limit = MAX_ORDERED_ACTI
   return limit === null ? ordered : ordered.slice(0, limit);
 }
 
-function search(state, depth, player, alpha, beta) {
+function search(state, depth, player, alpha, beta, maxOrderedActions) {
   if (state.status === 'finished') return evaluateAiState(state, player);
   if (depth === 0) return evaluateAiState(state, player);
 
@@ -28,7 +28,7 @@ function search(state, depth, player, alpha, beta) {
   const actions = getLegalActions(state, state.currentPlayer);
   if (actions.length === 0) return evaluateAiState(state, player);
 
-  const ordered = orderActions(state, actions, player, maximize);
+  const ordered = orderActions(state, actions, player, maximize, maxOrderedActions);
   let bestScore = maximize ? -Infinity : Infinity;
   for (const { action } of ordered) {
     const score = search(
@@ -36,7 +36,8 @@ function search(state, depth, player, alpha, beta) {
       depth - 1,
       player,
       alpha,
-      beta
+      beta,
+      maxOrderedActions
     );
     if (maximize) {
       bestScore = Math.max(bestScore, score);
@@ -51,6 +52,11 @@ function search(state, depth, player, alpha, beta) {
 }
 
 export class StrongAI {
+  constructor(searchDepth = SEARCH_DEPTH, maxOrderedActions = MAX_ORDERED_ACTIONS) {
+    this.searchDepth = searchDepth;
+    this.maxOrderedActions = maxOrderedActions;
+  }
+
   chooseMove(state, player = state.aiPlayer) {
     if (player !== 'white' && player !== 'black') {
       throw new Error('Le joueur IA n’est pas défini.');
@@ -71,10 +77,11 @@ export class StrongAI {
     for (const { action } of ordered) {
       const score = search(
         applyAiAction(state, action),
-        SEARCH_DEPTH,
+        this.searchDepth,
         player,
         alpha,
-        Infinity
+        Infinity,
+        this.maxOrderedActions
       );
       if (score > bestScore) {
         bestScore = score;
