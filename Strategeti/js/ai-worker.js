@@ -5,7 +5,14 @@ import { UltraAI } from './ai-ultra.js';
 self.addEventListener('message', event => {
   const { state, level } = event.data;
   try {
-    const ai = level === 'strong' ? new StrongAI() : new BeginnerAI();
+    let ai;
+    if (level === 'strong') {
+      ai = new StrongAI();
+    } else if (level === 'ultra') {
+      ai = new UltraAI();
+    } else {
+      ai = new BeginnerAI();
+    }
     const action = ai.chooseMove(state);
     self.postMessage({ action });
   } catch (error) {

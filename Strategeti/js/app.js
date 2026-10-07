@@ -411,11 +411,11 @@ function renderGame() {
     : 'Les quatre coins sont interdits à la pose ; les déplacements sur ces cases restent autorisés.';
   document.querySelector('#black-title .player-position').textContent =
     gameState.aiPlayer === 'black'
-      ? `— en haut · IA ${gameState.aiLevel === 'strong' ? 'forte' : 'débutante'}`
+      ? `— en haut · IA ${gameState.aiLevel === 'strong' ? 'forte' : gameState.aiLevel === 'ultra' ? 'ultra' : 'débutante'}`
       : '— en haut';
   document.querySelector('#white-title .player-position').textContent =
     gameState.aiPlayer === 'white'
-      ? `— en bas · IA ${gameState.aiLevel === 'strong' ? 'forte' : 'débutante'}`
+      ? `— en bas · IA ${gameState.aiLevel === 'strong' ? 'forte' : gameState.aiLevel === 'ultra' ? 'ultra' : 'débutante'}`
       : '— en bas';
   renderBoard();
   renderGazelleMoveControls();

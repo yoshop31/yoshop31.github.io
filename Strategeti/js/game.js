@@ -251,7 +251,7 @@ export function createGame(
     throw new Error('Le joueur IA sélectionné n’est pas disponible.');
   }
   if ((aiPlayer === null && aiLevel !== null) ||
-      (aiPlayer !== null && aiLevel !== 'beginner' && aiLevel !== 'strong')) {
+      (aiPlayer !== null && aiLevel !== 'beginner' && aiLevel !== 'strong' && aiLevel !== 'ultra')) {
     throw new Error('La difficulté de l’IA sélectionnée n’est pas disponible.');
   }
 
@@ -672,7 +672,7 @@ export function isGameState(value) {
       !Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, value.boardId)) return false;
   if (value.aiPlayer !== null && value.aiPlayer !== 'black' && value.aiPlayer !== 'white') return false;
   if ((value.aiPlayer === null && value.aiLevel !== null) ||
-      (value.aiPlayer !== null && value.aiLevel !== 'beginner' && value.aiLevel !== 'strong')) return false;
+      (value.aiPlayer !== null && value.aiLevel !== 'beginner' && value.aiLevel !== 'strong' && value.aiLevel !== 'ultra')) return false;
   if (!Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) return false;
   if (value.currentPlayer !== 'white' && value.currentPlayer !== 'black') return false;
   if (value.status !== 'playing' && value.status !== 'finished') return false;
@@ -785,7 +785,7 @@ export function migrateGameState(value) {
       : null,
     aiLevel: value.version === 6 &&
       (value.aiPlayer === 'black' || value.aiPlayer === 'white')
-      ? value.aiLevel === 'strong' ? 'strong' : 'beginner'
+      ? value.aiLevel === 'strong' ? 'strong' : value.aiLevel === 'ultra' ? 'ultra' : 'beginner'
       : null,
     status: resumedAfterWin ? 'finished' : value.status,
     winner: resumedAfterWin ? migratedWinner : value.winner,
