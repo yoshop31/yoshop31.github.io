@@ -178,7 +178,7 @@ function describeStock(player) {
     for (let instanceIndex = 0; instanceIndex < count; instanceIndex += 1) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'piece-choice';
+      button.className = `piece-choice ${player}`;
       button.disabled = isSaving ||
         isAiThinking ||
         gameState.status !== 'playing' ||
@@ -381,10 +381,10 @@ function renderCapturedStock() {
       ).length;
       for (let index = 0; index < count; index += 1) {
         const item = document.createElement('span');
-        item.className = 'captured-piece';
+        item.className = `captured-piece ${player}`;
         item.setAttribute('aria-label', piece.name);
         item.title = piece.name;
-        item.innerHTML = `<span aria-hidden="true">${piece.icon}</span>`;
+        item.innerHTML = `<span class="piece-disc" aria-hidden="true">${piece.icon}</span>`;
         container.append(item);
       }
     }

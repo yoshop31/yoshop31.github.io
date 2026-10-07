@@ -469,8 +469,28 @@ h2 {
 }
 
 .piece-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 2px solid #fbfbf4;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
   font-size: 1.42rem;
   line-height: 1;
+}
+
+.piece-choice.black .piece-icon,
+.captured-piece.black .piece-disc {
+  border-color: #26362d;
+  background: #27352e;
+}
+
+.piece-choice.white .piece-icon,
+.captured-piece.white .piece-disc {
+  border-color: #fbfbf4;
+  background: #fff;
 }
 
 .board-area {
@@ -589,6 +609,19 @@ h2 {
   border-radius: 7px;
   background: #f5f6f1;
   font-size: 0.9rem;
+}
+
+.captured-piece .piece-disc {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid #fbfbf4;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .captured-stock:not(.has-captured) .captured-groups {
