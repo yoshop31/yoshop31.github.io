@@ -5,8 +5,8 @@ import {
   opponentOf
 } from './ai.js';
 
-const SEARCH_DEPTH = 2;//initial =2
-const MAX_ORDERED_ACTIONS = 10;//initial =10
+const SEARCH_DEPTH = 6;//initial =2
+const MAX_ORDERED_ACTIONS = 15;//initial =10
 
 function orderActions(state, actions, player, maximize, limit = MAX_ORDERED_ACTIONS) {
   const ordered = actions
@@ -50,7 +50,7 @@ function search(state, depth, player, alpha, beta) {
   return bestScore;
 }
 
-export class StrongAI {
+export class UltraAI {
   chooseMove(state, player = state.aiPlayer) {
     if (player !== 'white' && player !== 'black') {
       throw new Error('Le joueur IA n’est pas défini.');

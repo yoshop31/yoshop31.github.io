@@ -6,17 +6,21 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-pwa-4.3';
+var cache_storage_name = 'strategeti-pwa-4.5';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
 	start_page,
 	offline_page,
-	'css/style.css?v=20261006-turn-feedback',
+	'test-ia.html',
+	'css/style.css?v=20261006-ai-tests',
 	'js/game.js',
 	'js/ai.js',
 	'js/ai-strong.js',
+	'js/ai-ultra.js',
 	'js/ai-worker.js',
+	'js/test-ia.js',
+	'js/ai-battle-worker.js',
 	'js/game-api.js',
 	'js/storage.js',
 	'js/app.js',

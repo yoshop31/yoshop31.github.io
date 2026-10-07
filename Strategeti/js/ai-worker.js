@@ -1,5 +1,6 @@
 import { BeginnerAI } from './ai.js';
 import { StrongAI } from './ai-strong.js';
+import { UltraAI } from './ai-ultra.js';
 
 self.addEventListener('message', event => {
   const { state, level } = event.data;
