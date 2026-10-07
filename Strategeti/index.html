@@ -37,15 +37,19 @@
           <option value="savanna-classic">Savane — classique</option>
           <option value="savanna-advanced">Savane — avancé</option>
         </select>
-        <label for="player-mode">Mode de jeu</label>
-        <select id="player-mode" name="playerMode">
-          <option value="none">2 joueurs</option>
-          <option value="black-beginner">IA débutante — noir</option>
-          <option value="white-beginner">IA débutante — blanc</option>
-          <option value="black-strong">IA forte — noir</option>
-          <option value="white-strong">IA forte — blanc</option>
-          <option value="black-ultra">IA ultra — noir</option>
-          <option value="white-ultra">IA ultra — blanc</option>
+        <label for="black-player">Joueur Noir</label>
+        <select id="black-player" name="blackPlayer">
+          <option value="human" selected>Joueur</option>
+          <option value="beginner">IA débutante</option>
+          <option value="strong">IA forte</option>
+          <option value="ultra">IA ultra</option>
+        </select>
+        <label for="white-player">Joueur Blanc</label>
+        <select id="white-player" name="whitePlayer">
+          <option value="human" selected>Joueur</option>
+          <option value="beginner">IA débutante</option>
+          <option value="strong">IA forte</option>
+          <option value="ultra">IA ultra</option>
         </select>
         <button class="button button-primary" type="submit">Démarrer la partie</button>
       </form>

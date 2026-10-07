@@ -6,14 +6,16 @@ self.addEventListener('message', event => {
   const { state, level } = event.data;
   try {
     let ai;
-    if (level === 'strong') {
+    if (level === 'beginner') {
+      ai = new BeginnerAI();
+    } else if (level === 'strong') {
       ai = new StrongAI();
     } else if (level === 'ultra') {
       ai = new UltraAI();
     } else {
-      ai = new BeginnerAI();
+      throw new Error('Niveau d’IA non reconnu.');
     }
-    const action = ai.chooseMove(state);
+    const action = ai.chooseMove(state, state.currentPlayer);
     self.postMessage({ action });
   } catch (error) {
     self.postMessage({

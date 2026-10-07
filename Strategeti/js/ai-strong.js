@@ -57,7 +57,7 @@ export class StrongAI {
     this.maxOrderedActions = maxOrderedActions;
   }
 
-  chooseMove(state, player = state.aiPlayer) {
+  chooseMove(state, player = state.currentPlayer) {
     if (player !== 'white' && player !== 'black') {
       throw new Error('Le joueur IA n’est pas défini.');
     }

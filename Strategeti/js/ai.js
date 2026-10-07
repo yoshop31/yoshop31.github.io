@@ -97,7 +97,7 @@ export function evaluateAiState(state, player) {
 }
 
 export class BeginnerAI {
-  chooseMove(state, player = state.aiPlayer) {
+  chooseMove(state, player = state.currentPlayer) {
     if (player !== 'white' && player !== 'black') {
       throw new Error('Le joueur IA n’est pas défini.');
     }
@@ -142,6 +142,6 @@ export class BeginnerAI {
   }
 }
 
-export function chooseAiMove(state, player = state.aiPlayer) {
+export function chooseAiMove(state, player = state.currentPlayer) {
   return new BeginnerAI().chooseMove(state, player);
 }

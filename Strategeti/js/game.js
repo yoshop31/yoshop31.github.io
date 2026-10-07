@@ -238,30 +238,40 @@ function advanceTurn(state, changes, player) {
   return nextState;
 }
 
-export function createGame(
-  boardId = BOARD_ID,
-  aiPlayer = null,
-  aiLevel = aiPlayer === null ? null : 'beginner'
-) {
+const PLAYER_TYPES = ['human', 'beginner', 'strong', 'ultra'];
+
+function normalizePlayers(playersOrAiPlayer, aiLevel) {
+  if (playersOrAiPlayer === null || playersOrAiPlayer === undefined) {
+    return { black: 'human', white: 'human' };
+  }
+  if (typeof playersOrAiPlayer === 'string') {
+    if (playersOrAiPlayer !== 'black' && playersOrAiPlayer !== 'white') {
+      throw new Error('Le joueur IA sélectionné n’est pas disponible.');
+    }
+    const players = { black: 'human', white: 'human' };
+    players[playersOrAiPlayer] = aiLevel ?? 'beginner';
+    return players;
+  }
+  return playersOrAiPlayer;
+}
+
+export function createGame(boardId = BOARD_ID, playersOrAiPlayer = null, aiLevel) {
   boardId = normalizeBoardId(boardId);
   if (!Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, boardId)) {
     throw new Error('Ce plateau n’est pas disponible.');
   }
-  if (aiPlayer !== null && aiPlayer !== 'black' && aiPlayer !== 'white') {
-    throw new Error('Le joueur IA sélectionné n’est pas disponible.');
-  }
-  if ((aiPlayer === null && aiLevel !== null) ||
-      (aiPlayer !== null && aiLevel !== 'beginner' && aiLevel !== 'strong' && aiLevel !== 'ultra')) {
-    throw new Error('La difficulté de l’IA sélectionnée n’est pas disponible.');
+  const players = normalizePlayers(playersOrAiPlayer, aiLevel);
+  if (!players || typeof players !== 'object' ||
+      !PLAYER_TYPES.includes(players.black) || !PLAYER_TYPES.includes(players.white)) {
+    throw new Error('Les types de joueurs sélectionnés ne sont pas disponibles.');
   }
 
   const stock = Object.fromEntries(PIECES.map(piece => [piece.id, 2]));
 
   return {
-    version: 7,
+    version: 8,
     boardId,
-    aiPlayer,
-    aiLevel,
+    players: { black: players.black, white: players.white },
     board: Array(BOARD_SIZE * BOARD_SIZE).fill(null),
     stocks: {
       black: { ...stock },
@@ -668,11 +678,11 @@ function isValidPiece(piece) {
 }
 
 export function isGameState(value) {
-  if (!value || value.version !== 7 ||
+  if (!value || value.version !== 8 ||
       !Object.prototype.hasOwnProperty.call(FORBIDDEN_PLACEMENTS, value.boardId)) return false;
-  if (value.aiPlayer !== null && value.aiPlayer !== 'black' && value.aiPlayer !== 'white') return false;
-  if ((value.aiPlayer === null && value.aiLevel !== null) ||
-      (value.aiPlayer !== null && value.aiLevel !== 'beginner' && value.aiLevel !== 'strong' && value.aiLevel !== 'ultra')) return false;
+  if (!value.players || typeof value.players !== 'object' ||
+      !PLAYER_TYPES.includes(value.players.black) ||
+      !PLAYER_TYPES.includes(value.players.white)) return false;
   if (!Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) return false;
   if (value.currentPlayer !== 'white' && value.currentPlayer !== 'black') return false;
   if (value.status !== 'playing' && value.status !== 'finished') return false;
@@ -736,7 +746,7 @@ export function isGameState(value) {
 
 export function migrateGameState(value) {
   if (isGameState(value)) return value;
-  if (!value || ![1, 2, 3, 4, 5, 6].includes(value.version) ||
+  if (!value || ![1, 2, 3, 4, 5, 6, 7].includes(value.version) ||
       ![LEGACY_BOARD_ID, BOARD_ID, ADVANCED_BOARD_ID].includes(value.boardId) ||
       !Array.isArray(value.board) || value.board.length !== BOARD_SIZE * BOARD_SIZE) {
     return null;
@@ -754,10 +764,9 @@ export function migrateGameState(value) {
       : value.currentPlayer;
     const migratedLegacy = {
       ...value,
-      version: 7,
+      version: 8,
       boardId: normalizeBoardId(value.boardId),
-      aiPlayer: null,
-      aiLevel: null,
+      players: { black: 'human', white: 'human' },
       captured: [],
       gazelleMove: null,
       currentPlayer,
@@ -775,18 +784,25 @@ export function migrateGameState(value) {
     : aligned.values().next().value;
   const gazelleMove = value.version === 4 ? value.gazelleMove ?? null : null;
   const resumedAfterWin = value.status === 'playing' && aligned.size > 0 && gazelleMove === null;
+  const migratedPlayer = value.version >= 6 &&
+    (value.aiPlayer === 'black' || value.aiPlayer === 'white')
+    ? value.aiLevel === 'strong' || value.aiLevel === 'ultra'
+      ? value.aiLevel
+      : 'beginner'
+    : 'human';
+  const players = { black: 'human', white: 'human' };
+  if (value.version >= 6 &&
+      (value.aiPlayer === 'black' || value.aiPlayer === 'white')) {
+    players[value.aiPlayer] = migratedPlayer;
+  }
+  const legacyState = { ...value };
+  delete legacyState.aiPlayer;
+  delete legacyState.aiLevel;
   const migrated = {
-    ...value,
-    version: 7,
+    ...legacyState,
+    version: 8,
     boardId: normalizeBoardId(value.boardId),
-    aiPlayer: value.version >= 6 &&
-      (value.aiPlayer === 'black' || value.aiPlayer === 'white')
-      ? value.aiPlayer
-      : null,
-    aiLevel: value.version === 6 &&
-      (value.aiPlayer === 'black' || value.aiPlayer === 'white')
-      ? value.aiLevel === 'strong' ? 'strong' : value.aiLevel === 'ultra' ? 'ultra' : 'beginner'
-      : null,
+    players,
     status: resumedAfterWin ? 'finished' : value.status,
     winner: resumedAfterWin ? migratedWinner : value.winner,
     captured,

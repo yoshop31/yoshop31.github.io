@@ -17,12 +17,12 @@ Jeu de placement pour deux joueurs sur le même appareil, installable comme PWA 
 - Les pièces mangées sont suivies individuellement à droite du plateau et ne retournent pas au stock jouable.
 - Le joueur actif est indiqué par un cadre brun autour de sa réserve ; chaque changement de joueur est signalé par un son de pièce posée.
 - Un joueur perd si cinq de ses pièces ont été mangées ou s’il n’a aucun coup légal à son tour.
-- Une partie peut se jouer à deux ou contre l’IA, qui peut jouer avec les pièces noires ou blanches. Le niveau débutant compare les coups légaux aux réponses immédiates de l’adversaire ; le niveau fort examine trois demi-coups avec recherche alpha-bêta et tri des réponses.
+- Le type de joueur se choisit indépendamment pour Noir et Blanc : joueur humain, IA débutante, forte ou ultra. Deux IA peuvent s’affronter. L’IA débutante compare les coups légaux aux réponses immédiates ; les IA plus fortes réutilisent le même moteur alpha-bêta avec des paramètres de recherche différents.
 - La page `test-ia.html` permet de simuler jusqu’à 100 parties entre deux niveaux d’IA, avec inversion des couleurs entre les parties, avancement par partie et par coup, et un résultat nul après 200 coups.
 
 ## Architecture
 
-- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale. Les sauvegardes sont migrées vers la version actuelle du modèle.
+- `js/game.js` contient les règles et le modèle de partie. `createGame`, `playMove`, `moveElephant`, `moveLion`, `moveZebra` et `moveGazelle` retournent un nouvel état sans modifier l’état précédent ; `finishGazelleMove` termine le tour et `cancelGazelleMove` restaure sa position initiale. Le modèle mémorise le type de joueur indépendamment pour chaque couleur ; les anciennes sauvegardes sont migrées automatiquement.
 - `js/ai.js` contient la classe `BeginnerAI` ; `js/ai-strong.js` contient la classe `StrongAI` et son moteur de recherche alpha-bêta. `js/ai-worker.js` calcule leurs coups dans un Web Worker pour laisser l’interface réactive pendant la réflexion.
 - `js/test-ia.js` pilote l’interface du banc d’essai ; `js/ai-battle-worker.js` simule les parties et transmet leur avancement sans utiliser le plateau graphique.
 - `js/game-api.js` expose les actions du jeu à l’interface, migre les anciennes sauvegardes (y compris une partie déjà gagnée par alignement) et coordonne règles et sauvegarde.

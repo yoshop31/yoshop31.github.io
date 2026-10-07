@@ -6,7 +6,7 @@
  * learn more in Github : https://github.com/alirahimi818/simple-PWA
  */
 
-var cache_storage_name = 'strategeti-pwa-4.7';
+var cache_storage_name = 'strategeti-pwa-4.8';
 var start_page = 'index.html';
 var offline_page = 'offline.html';
 var first_cache_urls = [
