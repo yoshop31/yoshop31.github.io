@@ -13,7 +13,7 @@ const GAME_RULES = [
   'Quatre pièces d’une même couleur alignées horizontalement, verticalement ou en diagonale font gagner leur joueur.',
   'Un joueur perd si cinq de ses pièces ont été mangées ou s’il ne dispose d’aucun coup légal à son tour.'
 ];
-const REQUEST_TIMEOUT_MS = 60000;
+const REQUEST_TIMEOUT_MS = 120000;
 
 function describeAction(action) {
   const pieceName = PIECES.find(piece => piece.id === action.pieceId).name;
@@ -111,7 +111,7 @@ async function requestActionIndex(model, prompt) {
     return parsed;
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error('Ollama n’a pas répondu en moins de 60 secondes.');
+      throw new Error('Ollama n’a pas répondu.');
     }
     if (error instanceof TypeError) {
       throw new Error(
